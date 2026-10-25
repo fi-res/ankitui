@@ -137,7 +137,7 @@ package with fuzz turned off):
 - Deck list counts and study queue counts: random deck trees with per-deck
   limits and sibling burying, with no differences.
 
-Not implemented: FSRS, and audio playback and image display
+Not implemented: FSRS, audio playback and image display
 (media is shown as `[image: name]` and `♪ name` placeholders).
 
 ## Development
