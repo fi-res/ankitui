@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ankitui"
+version = "0.1.0"
+description = "A terminal UI for Anki collections, built with Textual"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "AGPL-3.0-or-later" }
+dependencies = [
+    "textual>=0.80",
+    "zstandard>=0.22",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-asyncio>=0.23"]
+
+[project.scripts]
+ankitui = "ankitui.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["ankitui*"]
+
+[tool.setuptools.package-data]
+ankitui = ["ui/*.tcss"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

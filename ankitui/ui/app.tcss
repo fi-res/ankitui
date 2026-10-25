@@ -1,0 +1,275 @@
+Screen {
+    background: $surface;
+}
+
+.dialog {
+    width: 70;
+    max-width: 95%;
+    height: auto;
+    max-height: 90%;
+    padding: 1 2;
+    border: thick $primary;
+    background: $panel;
+}
+
+.dialog-wide {
+    width: 100;
+    height: 90%;
+}
+
+.dialog-wide DirectoryTree {
+    height: 1fr;
+    border: round $primary-darken-2;
+}
+
+.dialog-title {
+    text-style: bold;
+    color: $accent;
+    width: 100%;
+    margin-bottom: 1;
+}
+
+.dialog-body {
+    height: auto;
+    max-height: 30;
+    margin-bottom: 1;
+}
+
+.dialog-buttons {
+    height: auto;
+    align-horizontal: right;
+    margin-top: 1;
+}
+
+.dialog-buttons Button {
+    margin-left: 1;
+}
+
+ModalScreen {
+    align: center middle;
+    background: $background 60%;
+}
+
+/* ---------------------------------------------------------------- decks */
+
+#deck-table {
+    height: 1fr;
+    border: round $primary-darken-1;
+}
+
+#deck-summary {
+    height: auto;
+    padding: 0 1;
+    color: $text-muted;
+}
+
+.empty-hint {
+    padding: 2 4;
+    color: $text-muted;
+}
+
+/* ------------------------------------------------------------- overview */
+
+#overview {
+    align: center top;
+    padding: 1 2;
+}
+
+#overview-card {
+    width: 80;
+    max-width: 100%;
+    height: auto;
+    border: round $primary;
+    padding: 1 2;
+}
+
+#overview-title {
+    text-style: bold;
+    color: $accent;
+    width: 100%;
+    content-align: center middle;
+}
+
+#overview-counts {
+    height: auto;
+    margin: 1 0;
+}
+
+#overview-buttons {
+    height: auto;
+    margin-top: 1;
+}
+
+#overview-buttons Button {
+    margin-right: 1;
+}
+
+/* ------------------------------------------------------------- reviewer */
+
+#review-top {
+    height: 1;
+    padding: 0 1;
+    background: $panel;
+}
+
+#review-counts {
+    width: 1fr;
+}
+
+#review-timer {
+    width: auto;
+    color: $text-muted;
+}
+
+#card-scroll {
+    height: 1fr;
+    padding: 1 2;
+}
+
+#card-content {
+    width: 100%;
+    text-align: center;
+}
+
+#type-answer {
+    margin: 0 4;
+    display: none;
+}
+
+#type-answer.visible {
+    display: block;
+}
+
+#answer-bar {
+    height: 3;
+    align-horizontal: center;
+}
+
+#answer-bar Button {
+    margin: 0 1;
+    min-width: 16;
+}
+
+#btn-again { background: $error-darken-1; }
+#btn-hard { background: $warning-darken-2; }
+#btn-good { background: $success-darken-1; }
+#btn-easy { background: $primary-darken-1; }
+
+/* --------------------------------------------------------------- editor */
+
+#editor {
+    padding: 0 1;
+}
+
+#fields {
+    height: auto;
+}
+
+.field-label {
+    margin-top: 1;
+    text-style: bold;
+}
+
+.field-input {
+    height: auto;
+    min-height: 3;
+    max-height: 10;
+}
+
+.editor-row {
+    height: auto;
+}
+
+.editor-row Select {
+    width: 1fr;
+}
+
+.editor-row Label {
+    width: auto;
+    padding: 1 1 0 0;
+}
+
+#editor-buttons {
+    height: auto;
+    margin-top: 1;
+}
+
+#editor-buttons Button {
+    margin-right: 1;
+}
+
+/* -------------------------------------------------------------- browser */
+
+#browser-search {
+    height: auto;
+}
+
+#browser-search Input {
+    width: 1fr;
+}
+
+#browser-table {
+    height: 2fr;
+}
+
+#browser-preview {
+    height: 1fr;
+    border-top: solid $primary-darken-2;
+    padding: 0 1;
+}
+
+/* -------------------------------------------------------------- options */
+
+#options {
+    padding: 0 2;
+}
+
+.opt-section {
+    margin-top: 1;
+    text-style: bold;
+    color: $accent;
+}
+
+.opt-row {
+    height: auto;
+}
+
+.opt-row Label {
+    width: 40;
+    padding-top: 1;
+}
+
+.opt-row Input {
+    width: 1fr;
+}
+
+.opt-row Select {
+    width: 1fr;
+}
+
+.opt-row Checkbox {
+    width: 1fr;
+}
+
+.opt-help {
+    color: $text-muted;
+    padding-left: 2;
+}
+
+.form-row {
+    height: auto;
+}
+
+.form-row Label {
+    width: 24;
+    padding-top: 1;
+}
+
+.form-row Input, .form-row Select {
+    width: 1fr;
+}
+
+#cs-tags {
+    height: 10;
+    border: round $primary-darken-2;
+}
