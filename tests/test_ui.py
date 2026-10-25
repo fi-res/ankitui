@@ -378,3 +378,28 @@ async def test_stats_scroll_over_plot(tmp_path):
         assert scroll.scroll_y > 0
         # the plot itself must not zoom
         assert (plot._x_min, plot._x_max, plot._y_min, plot._y_max) == limits
+
+
+async def test_stacked_bars_have_no_gaps(tmp_path):
+    from textual.app import App
+    from textual_hires_canvas import Canvas
+
+    from ankitui.ui.plots import new_plot, stacked_bars
+
+    class PlotApp(App):
+        def compose(self):
+            yield new_plot("p")
+
+    app = PlotApp()
+    async with app.run_test(size=(60, 24)) as pilot:
+        plot = app.query_one("#p")
+        # layer boundaries that fall in the middle of cells
+        stacked_bars(plot, [1, 2, 3], [([1.3, 2.7, 0.9], "red"), ([2.2, 1.1, 3.4], "green")])
+        await pilot.pause(0.2)
+        canvas = plot.query_one("#plot", Canvas)
+        for col in range(canvas.size.width):
+            cells = [canvas.get_pixel(col, row) for row in range(canvas.size.height)]
+            bar = [(c, s) for c, s in cells if c in ("▀", "▄", "█")]
+            # only the topmost cell of a bar may be half empty
+            for char, style in bar[1:]:
+                assert char == "█" or " on " in style, (col, char, style)
