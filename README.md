@@ -40,8 +40,9 @@ to Python.
   whole collection, over 1 month, 3 months, 1 year or the deck's life: today's
   summary, card counts, future due forecast, a review calendar heatmap with
   streaks, reviews and review time per day (learning, young, mature, relearning,
-  filtered), interval and ease distributions, hourly breakdown, answer buttons,
-  cards added, and a true retention table.
+  filtered) with a 7-day average line, interval and ease distributions, hourly
+  breakdown, answer buttons, cards added, and a true retention table. The charts
+  are drawn with [textual-plot](https://github.com/davidfokkema/textual-plot).
 - **Interface**: Nerd Font icons, a details panel for the highlighted deck, a
   "today" banner with your study streak, a session progress bar in the reviewer,
   a keyboard shortcut reference (`?` or `F1`) and command palette entries

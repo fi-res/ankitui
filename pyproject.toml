@@ -12,6 +12,7 @@ license = { text = "AGPL-3.0-or-later" }
 dependencies = [
     "textual>=0.80",
     "zstandard>=0.22",
+    "textual-plot>=0.10",
 ]
 
 [project.optional-dependencies]

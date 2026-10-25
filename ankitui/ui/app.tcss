@@ -374,6 +374,18 @@ ModalScreen {
     padding: 0 1;
 }
 
+.stats-panel .stats-plot {
+    height: 14;
+}
+
+.stats-pair .stats-plot {
+    height: 12;
+}
+
+.stats-body {
+    height: auto;
+}
+
 #answer-bar Button:focus {
     text-style: bold;
 }

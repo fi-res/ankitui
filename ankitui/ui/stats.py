@@ -11,10 +11,12 @@ from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import Screen
 from textual.widgets import Footer, Header, Label, Select, Static
+from textual_plot import PlotWidget
 
 from ..core.stats import REVIEW_KINDS, Stats
-from .charts import heatmap, hbar, proportion_bar, stacked_bars
+from .charts import heatmap, hbar, proportion_bar
 from .icons import icon
+from .plots import add_line, category_bars, moving_average, new_plot, stacked_bars
 
 KIND_COLORS = {
     "learn": "dark_orange",
@@ -34,6 +36,10 @@ COUNT_COLORS = {
     "buried": "grey50",
 }
 BUTTON_COLORS = ["red3", "dark_orange", "green3", "dodger_blue1"]
+
+# short tick labels for the histogram buckets in core.stats (upper bound of each bucket)
+INTERVAL_TICKS = ["1d", "2d", "4d", "1w", "2w", "1m", "2m", "4m", "6m", "1y", "2y", "2y+"]
+EASE_TICKS = ["149", "179", "209", "239", "259", "279", "309", "310+"]
 
 PERIODS = [("1 month", 30), ("3 months", 90), ("1 year", 365), ("Deck life", 0)]
 
@@ -57,13 +63,34 @@ def _legend(items: list[tuple[str, str]]) -> Text:
     return text
 
 
-class StatsPanel(Static):
-    """A bordered panel whose content is rebuilt for its current width."""
+PLOT_PANELS = {"future", "reviews", "time", "intervals", "ease", "hourly", "added"}
+
+
+class StatsPanel(Vertical):
+    """A bordered panel with an optional plot and a text body rebuilt for its width."""
 
     def __init__(self, key: str, title: str, full: bool = False):
-        super().__init__("", id=f"panel-{key}", classes="stats-panel" + (" full" if full else ""))
+        super().__init__(id=f"panel-{key}", classes="stats-panel" + (" full" if full else ""))
         self.key = key
         self.border_title = title
+
+    def compose(self) -> ComposeResult:
+        if self.key in PLOT_PANELS:
+            yield new_plot(f"plot-{self.key}")
+        yield Static("", classes="stats-body")
+
+    def on_mount(self) -> None:
+        if self.key in PLOT_PANELS:
+            self.plot.margin_top = 1
+            self.plot.margin_left = 7
+
+    @property
+    def plot(self):
+        return self.query_one(PlotWidget)
+
+    @property
+    def body(self) -> Static:
+        return self.query_one(".stats-body", Static)
 
 
 class StatsScreen(Screen):
@@ -161,23 +188,25 @@ class StatsScreen(Screen):
         stats = Stats(self.col, None if self.whole_collection else self.did)
         days = self._days(stats)
         builders = {
-            "today": lambda w: self.render_today(stats),
-            "counts": lambda w: self.render_counts(stats, w),
-            "future": lambda w: self.render_future(stats, w, days),
-            "calendar": lambda w: self.render_calendar(stats, w),
-            "reviews": lambda w: self.render_reviews(stats, w, days, by_time=False),
-            "time": lambda w: self.render_reviews(stats, w, days, by_time=True),
-            "intervals": lambda w: self.render_histogram(stats.intervals(), w, "#a3e635", "Average interval", "d"),
-            "ease": lambda w: self.render_histogram(stats.eases(), w, "dodger_blue1", "Average ease", "%"),
-            "hourly": lambda w: self.render_hourly(stats, w, days),
-            "buttons": lambda w: self.render_buttons(stats, w, days),
-            "added": lambda w: self.render_added(stats, w, days),
-            "retention": lambda w: self.render_retention(stats),
+            "today": lambda p, w: self.render_today(stats),
+            "counts": lambda p, w: self.render_counts(stats, w),
+            "future": lambda p, w: self.render_future(stats, p, days),
+            "calendar": lambda p, w: self.render_calendar(stats, w),
+            "reviews": lambda p, w: self.render_reviews(stats, p, days, by_time=False),
+            "time": lambda p, w: self.render_reviews(stats, p, days, by_time=True),
+            "intervals": lambda p, w: self.render_histogram(
+                stats.intervals(), p, "#a3e635", "Average interval", "d", INTERVAL_TICKS
+            ),
+            "ease": lambda p, w: self.render_histogram(stats.eases(), p, "dodger_blue1", "Average ease", "%", EASE_TICKS),
+            "hourly": lambda p, w: self.render_hourly(stats, p, days),
+            "buttons": lambda p, w: self.render_buttons(stats, w, days),
+            "added": lambda p, w: self.render_added(stats, p, days),
+            "retention": lambda p, w: self.render_retention(stats),
         }
         for panel in self.query(StatsPanel):
             narrow = self.size.width < 110
             width = panel.content_size.width or max(self.size.width // (1 if narrow or "full" in panel.classes else 2) - 6, 30)
-            panel.update(builders[panel.key](max(width, 20)))
+            panel.body.update(builders[panel.key](panel, max(width, 20)))
 
     def render_today(self, stats: Stats):
         t = stats.today_stats()
@@ -223,17 +252,17 @@ class StatsScreen(Screen):
         return Group(proportion_bar([(n, COUNT_COLORS[k]) for k, n in parts], width), Text(""), table,
                      Text(f"Total: {total} cards", style="bold"))
 
-    def render_future(self, stats: Stats, width: int, days: int):
+    def render_future(self, stats: Stats, panel: StatsPanel, days: int):
         days = min(max(days, 7), 365)
         f = stats.future_due(days)
-        cols = [[n] for n in f.days]
-        chart = stacked_bars(cols, ["green3"], width, height=7, x_labels=("today", f"+{days - 1}d"))
+        stacked_bars(panel.plot, list(range(days)), [(f.days, "green3")])
+        panel.plot.set_xlabel("days from today")
         avg = sum(f.days) / days
         info = Text()
-        info.append(f"\nTotal: {f.total}   Due tomorrow: {f.tomorrow}   Average: {avg:.1f} cards/day")
+        info.append(f"Total: {f.total}   Due tomorrow: {f.tomorrow}   Average: {avg:.1f} cards/day")
         if f.overdue:
             info.append(f"   Overdue: {f.overdue}", style="red")
-        return Group(chart, info)
+        return info
 
     def render_calendar(self, stats: Stats, width: int):
         weeks = max(min((width - 6) // 2, 53), 4)
@@ -252,15 +281,20 @@ class StatsScreen(Screen):
         )
         return Group(heatmap(per_day, weeks), info)
 
-    def render_reviews(self, stats: Stats, width: int, days: int, by_time: bool):
+    def render_reviews(self, stats: Stats, panel: StatsPanel, days: int, by_time: bool):
         hist = stats.review_history(days)
         source = hist.times if by_time else hist.counts
         scale = 60000 if by_time else 1
-        cols = [[d[k] / scale for k in REVIEW_KINDS] for d in source]
-        colors = [KIND_COLORS[k] for k in REVIEW_KINDS]
-        chart = stacked_bars(cols, colors, width, height=8, x_labels=(f"-{days - 1}d", "today"))
+        x = list(range(-days + 1, 1))
+        series = [([d[k] / scale for d in source], KIND_COLORS[k]) for k in REVIEW_KINDS]
+        stacked_bars(panel.plot, x, series)
+        totals = [sum(d.values()) / scale for d in source]
+        if days >= 14:
+            add_line(panel.plot, x, moving_average(totals, 7), "white")
+        panel.plot.set_xlabel("days ago")
+        panel.plot.set_ylabel("minutes" if by_time else "reviews")
         studied = hist.days_studied()
-        info = Text("\n")
+        info = Text()
         if by_time:
             total_min = hist.total_time_ms() / 60000
             info.append(f"Total: {_minutes(hist.total_time_ms())}   ")
@@ -274,34 +308,28 @@ class StatsScreen(Screen):
             info.append(f"Total: {total} reviews   Days studied: {studied}/{days}   ")
             if studied:
                 info.append(f"Average: {total / studied:.1f}/study day ({total / days:.1f} overall)", style="dim")
-        legend = _legend([(KIND_LABELS[k], KIND_COLORS[k]) for k in REVIEW_KINDS])
-        return Group(chart, info, legend)
+        items = [(KIND_LABELS[k], KIND_COLORS[k]) for k in REVIEW_KINDS]
+        if days >= 14:
+            items.append(("7-day average", "white"))
+        return Group(info, _legend(items))
 
-    def render_histogram(self, h, width: int, color: str, avg_label: str, unit: str):
+    def render_histogram(self, h, panel: StatsPanel, color: str, avg_label: str, unit: str, ticks: list[str]):
+        category_bars(panel.plot, ticks, [n for _, n in h.buckets], color)
         if not h.total:
             return Text("No review cards yet.", style="dim")
-        peak = max(n for _, n in h.buckets) or 1
-        label_w = max(len(lbl) for lbl, _ in h.buckets)
-        bar_w = max(width - label_w - 8, 5)
-        out = Text()
-        for lbl, n in h.buckets:
-            out.append(f"{lbl:>{label_w}} ", style="dim")
-            out.append_text(hbar(n, peak, bar_w, color))
-            out.append(f" {n}\n")
-        out.append(f"{avg_label}: {h.average:.0f}{unit}   Median: {h.median}{unit}   Cards: {h.total}", style="bold")
-        return out
+        return Text(f"{avg_label}: {h.average:.0f}{unit}   Median: {h.median}{unit}   Cards: {h.total}", style="bold")
 
-    def render_hourly(self, stats: Stats, width: int, days: int):
+    def render_hourly(self, stats: Stats, panel: StatsPanel, days: int):
         hours = stats.hourly(days)
+        stacked_bars(panel.plot, list(range(24)), [([c for _, c in hours], "green3"), ([n - c for n, c in hours], "red3")])
+        panel.plot.set_xlabel("hour")
         if not any(n for n, _ in hours):
             return Text("No reviews in this period.", style="dim")
-        cols = [[c, n - c] for n, c in hours]
-        chart = stacked_bars(cols, ["green3", "red3"], width, height=6, x_labels=("0h", "23h"))
         best = max(range(24), key=lambda h: (hours[h][1] / hours[h][0]) if hours[h][0] >= 5 else -1)
-        info = Text("\n")
+        info = Text()
         if hours[best][0] >= 5:
             info.append(f"Best hour: {best}:00 ({100 * hours[best][1] / hours[best][0]:.0f}% correct)   ", style="dim")
-        return Group(chart, info, _legend([("Correct", "green3"), ("Again", "red3")]))
+        return Group(info, _legend([("Correct", "green3"), ("Again", "red3")]))
 
     def render_buttons(self, stats: Stats, width: int, days: int):
         b = stats.buttons(days)
@@ -320,11 +348,12 @@ class StatsScreen(Screen):
         out.append_text(_legend(list(zip(("Again", "Hard", "Good", "Easy"), BUTTON_COLORS))))
         return out
 
-    def render_added(self, stats: Stats, width: int, days: int):
+    def render_added(self, stats: Stats, panel: StatsPanel, days: int):
         added = stats.added(days)
         total = sum(added)
-        chart = stacked_bars([[n] for n in added], ["dodger_blue1"], width, height=5, x_labels=(f"-{days - 1}d", "today"))
-        return Group(chart, Text(f"\nTotal: {total} cards   Average: {total / days:.1f}/day"))
+        stacked_bars(panel.plot, list(range(-days + 1, 1)), [(added, "dodger_blue1")])
+        panel.plot.set_xlabel("days ago")
+        return Text(f"Total: {total} cards   Average: {total / days:.1f}/day")
 
     def render_retention(self, stats: Stats):
         table = Table(box=None, padding=(0, 2), header_style="bold")
