@@ -43,11 +43,25 @@ legacy packages. Anki desktop and AnkiDroid can open the file directly, and the
 
 ## Install and run
 
+With [uv](https://docs.astral.sh/uv/):
+
+```bash
+uv sync
+uv run ankitui                # runs from the project's .venv
+
+uv tool install .             # or install the `ankitui` command globally (~/.local/bin)
+```
+
+With pip:
+
 ```bash
 pip install .
 ankitui                       # uses ~/.local/share/ankitui/collection.anki2
 ankitui -c path/to/collection.anki2
 ```
+
+`uv sync` installs into `.venv`, so `ankitui` is only on your PATH after
+`source .venv/bin/activate`. Without activating, use `uv run ankitui`.
 
 You can also set the collection path with `ANKITUI_COLLECTION`.
 
