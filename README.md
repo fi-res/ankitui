@@ -43,6 +43,11 @@ to Python.
   filtered) with a 7-day average line, interval and ease distributions, hourly
   breakdown, answer buttons, cards added, and a true retention table. The charts
   are drawn with [textual-plot](https://github.com/davidfokkema/textual-plot).
+- **AnkiWeb sync** (`y`): log in with your AnkiWeb ID and password, then sync
+  in both directions with Anki desktop, AnkiDroid and AnkiMobile: incremental
+  sync of notes, cards, review history, decks, presets, note types, tags and
+  deletions, one-way (full) upload/download when needed, and media sync.
+  Self-hosted Anki sync servers are supported too.
 - **Interface**: Nerd Font icons, a details panel for the highlighted deck, a
   "today" banner with your study streak, a session progress bar in the reviewer,
   a keyboard shortcut reference (`?` or `F1`) and command palette entries
@@ -76,6 +81,26 @@ ankitui -c path/to/collection.anki2
 
 You can also set the collection path with `ANKITUI_COLLECTION`.
 
+### Syncing with AnkiWeb
+
+Press `y` in the deck list (or pick "Sync with AnkiWeb" from `Ctrl+P` or the
+`m` menu). The first time, you log in with your AnkiWeb ID and password. As in
+Anki, the password is not stored: AnkiTUI keeps only the sync key the server
+returns, in `~/.config/ankitui/settings.json` (readable only by you). To use a
+self-hosted server, tick "Use a self-hosted sync server" on the login screen.
+
+- The first sync, and any sync after a schema change (for example editing a
+  note type's fields or templates), is a one-way sync: you choose whether to
+  upload this collection or download the one on AnkiWeb. If one side is empty,
+  this happens automatically.
+- After that, syncs are incremental and merge changes from all your devices.
+- Media files are synced after the collection. You can turn media sync off in
+  the `m` menu, which also has "Sync when AnkiTUI starts" and "Log out".
+
+AnkiTUI uses the same sync protocol (v11) as current Anki versions. It was
+tested against Anki's own sync server (`python -m anki.syncserver`, the same
+code that runs AnkiWeb), with the official Anki client syncing alongside.
+
 ### Icons
 
 The interface uses [Nerd Font](https://www.nerdfonts.com) icons, so your
@@ -93,7 +118,7 @@ The choice and the theme are saved in `~/.config/ankitui/settings.json`.
 
 | Screen | Keys |
 | --- | --- |
-| Deck list | `Enter` study, `v` overview, `a` add, `b` browse, `s` statistics, `n` new deck, `f` filtered deck, `c` custom study, `o` options, `r` rename, `Del` delete, `Space` collapse, `i` import, `e` export, `u` undo, `m` more, `q` quit |
+| Deck list | `Enter` study, `y` sync, `v` overview, `a` add, `b` browse, `s` statistics, `n` new deck, `f` filtered deck, `c` custom study, `o` options, `r` rename, `Del` delete, `Space` collapse, `i` import, `e` export, `u` undo, `m` more, `q` quit |
 | Overview | `s`/`Enter` study, `c` custom study, `o` options, `t` statistics, `u` unbury, `Esc` back |
 | Statistics | `d` deck/collection, `p` period, `r` refresh |
 | Everywhere | `?`/`F1` shortcuts, `Ctrl+P` command palette, `Ctrl+Q` quit |
@@ -112,7 +137,7 @@ package with fuzz turned off):
 - Deck list counts and study queue counts: random deck trees with per-deck
   limits and sibling burying, with no differences.
 
-Not implemented: FSRS, sync with AnkiWeb, and audio playback and image display
+Not implemented: FSRS, and audio playback and image display
 (media is shown as `[image: name]` and `♪ name` placeholders).
 
 ## Development
@@ -124,6 +149,14 @@ pytest
 
 `tests/fixtures` holds packages generated with the official Anki backend. They
 cover import of both the modern and legacy formats.
+
+To run the sync integration test against a real Anki sync server:
+
+```bash
+pip install anki
+SYNC_USER1=alice:secret SYNC_PORT=27701 python -m anki.syncserver &
+ANKITUI_SYNC_TEST_URL=http://127.0.0.1:27701/ pytest tests/test_sync.py
+```
 
 ## License
 

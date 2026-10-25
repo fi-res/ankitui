@@ -158,3 +158,42 @@ async def test_stats_and_help_screens(tmp_path, monkeypatch):
         await pilot.pause()
         assert app.settings["icons"] is False
         app.action_toggle_icons()
+
+
+async def test_login_and_sync_flow(tmp_path, monkeypatch):
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "cfg"))
+    from fake_sync_server import FakeSyncServer
+
+    from ankitui.ui.sync import LoginScreen, SyncScreen
+
+    app = make_app(tmp_path)
+    with FakeSyncServer() as srv:
+        async with app.run_test(size=(120, 40)) as pilot:
+            app.settings.pop("sync", None)
+            srv.col_mod, srv.col_scm = app.col.mod, app.col.scm
+            await pilot.press("y")
+            await pilot.pause()
+            assert isinstance(app.screen, LoginScreen)
+            screen = app.screen
+            screen.query_one("#username").value = "user"
+            screen.query_one("#password").value = "wrong"
+            screen.query_one("#custom").value = True
+            screen.query_one("#endpoint").value = srv.url
+            screen.submit()
+            await app.workers.wait_for_complete()
+            await pilot.pause()
+            assert "incorrect" in str(screen.query_one("#login-error").render())
+            screen.query_one("#password").value = "pass"
+            screen.submit()
+            await app.workers.wait_for_complete()
+            await pilot.pause()
+            assert app.settings["sync"]["hkey"] == "HKEY"
+            assert isinstance(app.screen, SyncScreen)
+            for _ in range(20):
+                await app.workers.wait_for_complete()
+                await pilot.pause(0.05)
+                if not app.screen.running:
+                    break
+            text = str(app.screen.query_one("#sync-messages").render())
+            assert "up to date" in text
+            await pilot.press("escape")

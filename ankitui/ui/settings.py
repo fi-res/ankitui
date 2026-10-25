@@ -24,7 +24,10 @@ def save_settings(data: dict) -> None:
     path = settings_path()
     try:
         os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "w", encoding="utf-8") as f:
+        # the file holds the AnkiWeb sync key, so keep it private
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
+        os.chmod(path, 0o600)
     except OSError:
         pass

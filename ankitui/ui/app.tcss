@@ -393,3 +393,17 @@ ModalScreen {
 .help-title {
     margin-top: 1;
 }
+
+#sync-log {
+    height: 12;
+    border: round $primary-darken-2;
+    padding: 0 1;
+}
+
+#sync-busy, #login-busy {
+    height: 3;
+}
+
+#login-error {
+    height: auto;
+}

@@ -17,7 +17,7 @@ SECTIONS = [
         ("Enter", "Study the selected deck"), ("v", "Deck overview"), ("a", "Add note"),
         ("b", "Browse cards"), ("s", "Statistics"), ("n", "Create deck"), ("f", "Create filtered deck"),
         ("c", "Custom study"), ("o", "Deck options"), ("r", "Rename deck"), ("Del / x", "Delete deck"),
-        ("Space", "Collapse / expand"), ("i / e", "Import / export"), ("u", "Undo"), ("m", "More actions"),
+        ("Space", "Collapse / expand"), ("y", "Sync with AnkiWeb"), ("i / e", "Import / export"), ("u", "Undo"), ("m", "More actions"),
     ]),
     ("study", "Reviewer", [
         ("Space / Enter", "Show answer, then answer Good"), ("1 2 3 4", "Again / Hard / Good / Easy"),

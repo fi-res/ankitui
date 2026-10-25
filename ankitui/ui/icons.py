@@ -62,6 +62,9 @@ _ICONS: dict[str, tuple[str, str]] = {
     "back": ("\uf060", "←"),          # arrow-left
     "notetype": ("\uf0ca", "≔"),      # list-ul
     "theme": ("\uf1fc", "◐"),         # paint-brush
+    "sync": ("\uf0c2", "⇅"),          # cloud
+    "user": ("\uf007", "@"),          # user
+    "logout": ("\uf08b", "⇥"),        # sign-out
 }
 
 _enabled = True

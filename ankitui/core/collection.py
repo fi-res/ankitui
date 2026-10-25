@@ -255,7 +255,8 @@ class Collection:
         self.path = os.path.abspath(path)
         os.makedirs(os.path.dirname(self.path), exist_ok=True)
         is_new = not os.path.exists(self.path) or os.path.getsize(self.path) == 0
-        self.db = sqlite3.connect(self.path)
+        # sync runs in a worker thread while the UI waits, so allow cross-thread use
+        self.db = sqlite3.connect(self.path, check_same_thread=False)
         self.db.create_collation("unicase", lambda a, b: (a.lower() > b.lower()) - (a.lower() < b.lower()))
         if is_new:
             self._create()
@@ -322,15 +323,17 @@ class Collection:
             if key not in self.conf and key != "creationOffset":
                 self.conf[key] = value
 
-    def save(self) -> None:
-        self.mod = int_time(1000)
+    def save(self, bump_mod: bool = True) -> None:
+        if bump_mod:
+            self.mod = int_time(1000)
         self.db.execute(
-            "UPDATE col SET crt=?, mod=?, scm=?, usn=?, conf=?, models=?, decks=?, dconf=?, tags=?",
+            "UPDATE col SET crt=?, mod=?, scm=?, usn=?, ls=?, conf=?, models=?, decks=?, dconf=?, tags=?",
             (
                 self.crt,
                 self.mod,
                 self.scm,
                 self.usn_,
+                self.ls,
                 json.dumps(self.conf),
                 json.dumps(self.models),
                 json.dumps(self.decks),
@@ -342,7 +345,7 @@ class Collection:
 
     def close(self) -> None:
         if self.db:
-            self.save()
+            self.save(bump_mod=False)
             self.db.close()
             self.db = None  # type: ignore[assignment]
 
@@ -350,6 +353,7 @@ class Collection:
         return -1
 
     def mark_schema_modified(self) -> None:
+        """The next sync will need to be a full sync (like Anki's schema change)."""
         self.scm = int_time(1000)
 
     # ----------------------------------------------------------------- timing
@@ -789,8 +793,8 @@ class Collection:
     def _remove_cards_only(self, cids: list[int]) -> None:
         for chunk in _chunks(cids):
             q = ",".join(str(int(c)) for c in chunk)
+            # like Anki, review history is kept when cards are deleted
             self.db.execute(f"DELETE FROM cards WHERE id IN ({q})")
-            self.db.execute(f"DELETE FROM revlog WHERE cid IN ({q})")
             self.db.executemany(
                 "INSERT INTO graves VALUES (?,?,?)", [(self.usn(), c, GRAVE_CARD) for c in chunk]
             )

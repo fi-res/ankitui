@@ -55,6 +55,15 @@ class AnkiTUI(App):
         from .deck_picker import DeckPickerScreen
 
         self.push_screen(DeckPickerScreen())
+        from .sync import start_sync, sync_auth
+
+        if self.settings.get("sync_on_start") and sync_auth(self) is not None:
+            self.call_after_refresh(lambda: start_sync(self, lambda _ok: self._refresh_deck_list()))
+
+    def _refresh_deck_list(self) -> None:
+        hook = getattr(self.screen, "refresh_decks", None)
+        if callable(hook):
+            hook()
 
     def watch_theme(self, theme: str) -> None:
         if getattr(self, "settings", None) is not None and self.settings.get("theme") != theme:
@@ -122,6 +131,17 @@ class AnkiTUI(App):
 
         self.push_screen(NotetypesScreen())
 
+    def action_sync(self) -> None:
+        from .sync import start_sync
+
+        start_sync(self, lambda _ok: self._refresh_deck_list())
+
+    def action_logout(self) -> None:
+        from .sync import logout
+
+        logout(self)
+        self.notify("Logged out of AnkiWeb")
+
     def get_system_commands(self, screen: Screen) -> Iterable[SystemCommand]:
         yield from super().get_system_commands(screen)
         if self.col is None:
@@ -130,6 +150,9 @@ class AnkiTUI(App):
         yield SystemCommand("Browse cards", "Search and edit cards", self.action_open_browser)
         yield SystemCommand("Statistics", "Show study statistics", self.action_open_stats)
         yield SystemCommand("Note types", "Manage note types, fields and templates", self.action_open_notetypes)
+        yield SystemCommand("Sync with AnkiWeb", "Synchronise the collection and media", self.action_sync)
+        if (self.settings.get("sync") or {}).get("hkey"):
+            yield SystemCommand("Log out of AnkiWeb", "Forget the stored sync key", self.action_logout)
         yield SystemCommand(
             "Toggle Nerd Font icons",
             "Switch between Nerd Font icons and plain Unicode symbols",

@@ -59,6 +59,7 @@ class DeckPickerScreen(Screen):
         Binding("r", "rename", "Rename", show=False),
         Binding("delete,x", "delete", "Delete", show=False),
         Binding("space", "toggle_collapse", "Collapse", show=False),
+        Binding("y", "sync", "Sync"),
         Binding("i", "import", "Import"),
         Binding("e", "export", "Export"),
         Binding("u,ctrl+z", "undo", "Undo", show=False),
@@ -168,7 +169,18 @@ class DeckPickerScreen(Screen):
             text.append("    ")
         text.append("Due now: ", style="bold")
         text.append_text(counts_text(new, learn, review, sep="  "))
+        text.append("    ")
+        text.append_text(self._sync_status())
         self.query_one("#today-banner", Static).update(text)
+
+    def _sync_status(self) -> Text:
+        from .sync import needs_sync, sync_auth
+
+        if sync_auth(self.app) is None:
+            return Text(icon("sync") + "not logged in (y to sync)", style="dim")
+        if needs_sync(self.col):
+            return Text(icon("sync") + "changes not synced", style="yellow")
+        return Text(icon("sync") + "synced", style="green")
 
     def _update_summary(self) -> None:
         undo = self.col.sched.undo_name()
@@ -399,6 +411,11 @@ class DeckPickerScreen(Screen):
 
         self.app.push_screen(ExportScreen(self.selected_did()))
 
+    def action_sync(self) -> None:
+        from .sync import start_sync
+
+        start_sync(self.app, lambda _ok: self.refresh_decks())
+
     def action_undo(self) -> None:
         entry = self.col.sched.undo()
         if entry is None:
@@ -420,10 +437,19 @@ class DeckPickerScreen(Screen):
             ("custom", icon("custom") + "Custom study"),
             ("unbury", icon("unbury") + "Unbury cards in deck"),
             ("notetypes", icon("notetype") + "Manage note types"),
+            ("sync", icon("sync") + "Sync with AnkiWeb"),
+            ("sync_media", icon("sync") + f"Sync media: {'on' if self.app.settings.get('sync_media', True) else 'off'}"),
+            ("sync_start", icon("sync") + f"Sync when AnkiTUI starts: {'on' if self.app.settings.get('sync_on_start') else 'off'}"),
             ("icons", icon("theme") + "Toggle Nerd Font icons"),
             ("help", icon("help") + "Keyboard shortcuts"),
             ("about", icon("info") + "About AnkiTUI"),
         ]
+        from .sync import sync_auth
+
+        auth = sync_auth(self.app)
+        if auth:
+            choices.insert(choices.index(("sync", icon("sync") + "Sync with AnkiWeb")) + 1,
+                           ("logout", icon("logout") + f"Log out ({auth.get('username', '')})"))
         if did is not None and self.col.get_deck(did)["dyn"]:
             choices = [
                 ("rebuild", icon("rebuild") + "Rebuild filtered deck"),
@@ -448,6 +474,22 @@ class DeckPickerScreen(Screen):
                 self.refresh_decks()
             elif key == "empty" and did is not None:
                 self.col.sched.empty_filtered_deck(did)
+                self.refresh_decks()
+            elif key == "sync":
+                self.action_sync()
+            elif key in ("sync_media", "sync_start"):
+                setting = {"sync_media": "sync_media", "sync_start": "sync_on_start"}[key]
+                default = key == "sync_media"
+                self.app.settings[setting] = not self.app.settings.get(setting, default)
+                from .settings import save_settings
+
+                save_settings(self.app.settings)
+                self.notify(f"{'Sync media' if key == 'sync_media' else 'Sync on start'}: {'on' if self.app.settings[setting] else 'off'}")
+            elif key == "logout":
+                from .sync import logout
+
+                logout(self.app)
+                self.notify("Logged out of AnkiWeb")
                 self.refresh_decks()
             elif key == "notetypes":
                 from .notetypes import NotetypesScreen

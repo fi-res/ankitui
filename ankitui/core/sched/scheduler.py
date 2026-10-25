@@ -784,6 +784,7 @@ class Scheduler:
                     count = 0
                 deck[key] = [today, count - delta]
             deck["mod"] = int_time()
+            deck["usn"] = self.col.usn()
         deck = self.col.decks[str(did)]
         if new_delta > 0:
             deck["extendNew"] = new_delta
