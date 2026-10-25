@@ -98,8 +98,15 @@ self-hosted server, tick "Use a self-hosted sync server" on the login screen.
   the `m` menu, which also has "Sync when AnkiTUI starts" and "Log out".
 
 AnkiTUI uses the same sync protocol (v11) as current Anki versions. It was
-tested against Anki's own sync server (`python -m anki.syncserver`, the same
-code that runs AnkiWeb), with the official Anki client syncing alongside.
+tested against Anki's own sync server (`python -m anki.syncserver`), with the
+official Anki client syncing alongside.
+
+**AnkiWeb may refuse AnkiTUI.** AnkiWeb only accepts sync clients approved by
+the Anki developers (Anki, AnkiMobile, AnkiDroid and a few others), and AnkiTUI
+is not one of them. If a sync fails with "Server error 400", that is the likely
+reason. Syncing works with a [self-hosted sync
+server](https://docs.ankiweb.net/sync-server.html), which Anki desktop and
+AnkiDroid can also use, so all your devices can share it.
 
 ### Icons
 

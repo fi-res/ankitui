@@ -98,7 +98,14 @@ class HttpSyncClient:
                     raise _Redirect(location) from err
             if err.code == 403:
                 raise SyncError(body or "Authentication failed. Please log in again.", "auth") from err
-            raise SyncError(f"Server error {err.code}: {body or err.reason}", "server") from err
+            message = f"Server error {err.code} on {method}: {body or err.reason}"
+            if err.code == 400 and "ankiweb.net" in self.endpoint:
+                message += (
+                    "\nAnkiWeb rejected the request. AnkiWeb only accepts sync clients approved by the "
+                    "Anki developers, and AnkiTUI is not one of them, so this is most likely why. "
+                    "A self-hosted sync server works instead (see the README)."
+                )
+            raise SyncError(message, "server") from err
         except (urllib.error.URLError, TimeoutError, ConnectionError, OSError) as err:
             reason = getattr(err, "reason", err)
             raise SyncError(f"Network error: {reason}", "network") from err
