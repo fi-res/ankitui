@@ -45,7 +45,7 @@ to Python.
   whole collection, over 1 month, 3 months, 1 year or the deck's life: today's
   summary, card counts, future due forecast, a review calendar heatmap with
   streaks, reviews and review time per day (learning, young, mature, relearning,
-  filtered) with a 7-day average line, interval and ease distributions, hourly
+  filtered) with the last 7 days' average, interval and ease distributions, hourly
   breakdown, answer buttons, cards added, and a true retention table. The charts
   are drawn with [textual-plot](https://github.com/davidfokkema/textual-plot).
 - **AnkiWeb sync** (`y`): log in with your AnkiWeb ID and password, then sync

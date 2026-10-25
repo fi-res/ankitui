@@ -16,7 +16,7 @@ from textual_plot import PlotWidget
 from ..core.stats import REVIEW_KINDS, Stats
 from .charts import heatmap, hbar, proportion_bar
 from .icons import icon
-from .plots import add_line, category_bars, moving_average, new_plot, stacked_bars
+from .plots import category_bars, new_plot, stacked_bars
 
 KIND_COLORS = {
     "learn": "dark_orange",
@@ -289,8 +289,6 @@ class StatsScreen(Screen):
         series = [([d[k] / scale for d in source], KIND_COLORS[k]) for k in REVIEW_KINDS]
         stacked_bars(panel.plot, x, series)
         totals = [sum(d.values()) / scale for d in source]
-        if days >= 14:
-            add_line(panel.plot, x, moving_average(totals, 7), "white")
         panel.plot.set_xlabel("days ago")
         panel.plot.set_ylabel("minutes" if by_time else "reviews")
         studied = hist.days_studied()
@@ -308,9 +306,10 @@ class StatsScreen(Screen):
             info.append(f"Total: {total} reviews   Days studied: {studied}/{days}   ")
             if studied:
                 info.append(f"Average: {total / studied:.1f}/study day ({total / days:.1f} overall)", style="dim")
-        items = [(KIND_LABELS[k], KIND_COLORS[k]) for k in REVIEW_KINDS]
         if days >= 14:
-            items.append(("7-day average", "white"))
+            week = sum(totals[-7:]) / 7
+            info.append(f"\nLast 7 days: {week:.1f} {'min' if by_time else 'reviews'}/day", style="dim")
+        items = [(KIND_LABELS[k], KIND_COLORS[k]) for k in REVIEW_KINDS]
         return Group(info, _legend(items))
 
     def render_histogram(self, h, panel: StatsPanel, color: str, avg_label: str, unit: str, ticks: list[str]):

@@ -420,11 +420,11 @@ ModalScreen {
 }
 
 .stats-panel .stats-plot {
-    height: 14;
+    height: 20;
 }
 
 .stats-pair .stats-plot {
-    height: 12;
+    height: 17;
 }
 
 .stats-body {

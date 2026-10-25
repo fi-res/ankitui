@@ -4,13 +4,39 @@ from __future__ import annotations
 
 from typing import Sequence
 
+from textual import events
 from textual_plot import HiResMode, NumericAxisFormatter, PlotWidget
 from textual_plot.axis_formatter import CategoricalAxisFormatter
 
 
+class StatsPlot(PlotWidget):
+    """A plot that lets the mouse wheel / touchpad scroll the page around it.
+
+    PlotWidget stops scroll events even with pan and zoom turned off, so they
+    would never reach the scrollable stats page.
+    """
+
+    def on_mouse_scroll_down(self, event: events.MouseScrollDown) -> None:
+        self._scroll_page(event, down=True)
+
+    def on_mouse_scroll_up(self, event: events.MouseScrollUp) -> None:
+        self._scroll_page(event, down=False)
+
+    def _scroll_page(self, event: events.MouseEvent, down: bool) -> None:
+        # skips PlotWidget's zoom handlers, which run after this class's
+        event.prevent_default()
+        event.stop()
+        for widget in self.ancestors_with_self[1:]:
+            if getattr(widget, "allow_vertical_scroll", False):
+                if down:
+                    widget._scroll_down_for_pointer(animate=False)
+                else:
+                    widget._scroll_up_for_pointer(animate=False)
+                return
+
+
 def new_plot(ident: str) -> PlotWidget:
-    # pan/zoom would capture the mouse wheel and break scrolling of the stats page
-    return PlotWidget(id=ident, classes="stats-plot", allow_pan_and_zoom=False)
+    return StatsPlot(id=ident, classes="stats-plot", allow_pan_and_zoom=False)
 
 
 def stacked_bars(
@@ -40,21 +66,6 @@ def stacked_bars(
         plot.set_xlimits(*x_limits)
     elif n:
         plot.set_xlimits(min(x) - 0.5, max(x) + 0.5)
-
-
-def add_line(plot: PlotWidget, x: Sequence[float], y: Sequence[float], color: str) -> None:
-    plot.plot(list(x), list(y), line_style=color, hires_mode=HiResMode.BRAILLE)
-
-
-def moving_average(values: Sequence[float], window: int) -> list[float]:
-    out = []
-    total = 0.0
-    for i, v in enumerate(values):
-        total += v
-        if i >= window:
-            total -= values[i - window]
-        out.append(total / min(i + 1, window))
-    return out
 
 
 def category_bars(plot: PlotWidget, labels: Sequence[str], values: Sequence[float], color: str) -> None:

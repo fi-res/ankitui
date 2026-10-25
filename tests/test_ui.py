@@ -357,3 +357,24 @@ def test_server_args(monkeypatch):
     assert server_env(parse_args([]), {"SYNC_USER1": "env:pw"})["SYNC_USER1"] == "env:pw"
     with pytest.raises(SystemExit):
         server_env(parse_args([]), {})
+
+
+async def test_stats_scroll_over_plot(tmp_path):
+    from ankitui.ui.stats import StatsScreen
+
+    app = make_app(tmp_path)
+    async with app.run_test(size=(120, 40)) as pilot:
+        app.push_screen(StatsScreen(None))
+        await pilot.pause(0.3)
+        scroll = app.screen.query_one("#stats-scroll")
+        plot = app.screen.query_one("#plot-future")
+        limits = (plot._x_min, plot._x_max, plot._y_min, plot._y_max)
+        assert scroll.max_scroll_y > 0
+        from textual import events
+
+        for _ in range(3):
+            plot.post_message(events.MouseScrollDown(plot, 10, 5, 0, 1, 0, False, False, False))
+            await pilot.pause()
+        assert scroll.scroll_y > 0
+        # the plot itself must not zoom
+        assert (plot._x_min, plot._x_max, plot._y_min, plot._y_max) == limits

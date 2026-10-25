@@ -3,7 +3,6 @@ import time
 from ankitui.core.stats import Stats
 from ankitui.ui import icons
 from ankitui.ui.charts import heatmap, hbar, proportion_bar
-from ankitui.ui.plots import moving_average
 
 from conftest import add_basic, answer_next
 
@@ -81,7 +80,6 @@ def test_deck_scope(col):
 
 
 def test_charts_render():
-    assert moving_average([1, 2, 3, 4], 2) == [1.0, 1.5, 2.5, 3.5]
     assert len(hbar(5, 10, 20, "red").plain) == 20
     assert len(proportion_bar([(1, "red"), (3, "blue")], 12).plain) == 12
     assert "Mon" in heatmap({0: 5, -1: 2}, 10).plain
