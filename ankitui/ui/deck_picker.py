@@ -411,6 +411,12 @@ class DeckPickerScreen(Screen):
 
         self.app.push_screen(ExportScreen(self.selected_did()))
 
+    @staticmethod
+    def _anki_lib() -> bool:
+        from ..core import ankilib_sync
+
+        return ankilib_sync.available()
+
     def action_sync(self) -> None:
         from .sync import start_sync
 
@@ -440,6 +446,9 @@ class DeckPickerScreen(Screen):
             ("sync", icon("sync") + "Sync with AnkiWeb"),
             ("sync_media", icon("sync") + f"Sync media: {'on' if self.app.settings.get('sync_media', True) else 'off'}"),
             ("sync_start", icon("sync") + f"Sync when AnkiTUI starts: {'on' if self.app.settings.get('sync_on_start') else 'off'}"),
+            ("sync_backend", icon("sync") + "Sync engine: " + (
+                "built-in" if self.app.settings.get("sync_backend") == "builtin"
+                else ("Anki library" if self._anki_lib() else "built-in (anki library not installed)"))),
             ("icons", icon("theme") + "Toggle Nerd Font icons"),
             ("help", icon("help") + "Keyboard shortcuts"),
             ("about", icon("info") + "About AnkiTUI"),
@@ -485,6 +494,16 @@ class DeckPickerScreen(Screen):
 
                 save_settings(self.app.settings)
                 self.notify(f"{'Sync media' if key == 'sync_media' else 'Sync on start'}: {'on' if self.app.settings[setting] else 'off'}")
+            elif key == "sync_backend":
+                from .settings import save_settings
+
+                builtin = self.app.settings.get("sync_backend") == "builtin"
+                self.app.settings["sync_backend"] = "auto" if builtin else "builtin"
+                save_settings(self.app.settings)
+                if builtin and not self._anki_lib():
+                    self.notify("Install the anki package (pip install anki) to sync with the Anki library.", severity="warning")
+                else:
+                    self.notify("Sync engine: " + ("Anki library" if builtin else "built-in"))
             elif key == "logout":
                 from .sync import logout
 

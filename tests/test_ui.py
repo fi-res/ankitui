@@ -1,3 +1,4 @@
+import pytest
 import os
 
 from ankitui.ui.app import AnkiTUI
@@ -170,6 +171,7 @@ async def test_login_and_sync_flow(tmp_path, monkeypatch):
     with FakeSyncServer() as srv:
         async with app.run_test(size=(120, 40)) as pilot:
             app.settings.pop("sync", None)
+            app.settings["sync_backend"] = "builtin"
             srv.col_mod, srv.col_scm = app.col.mod, app.col.scm
             await pilot.press("y")
             await pilot.pause()
@@ -197,3 +199,32 @@ async def test_login_and_sync_flow(tmp_path, monkeypatch):
             text = str(app.screen.query_one("#sync-messages").render())
             assert "up to date" in text
             await pilot.press("escape")
+
+
+@pytest.mark.skipif(
+    not os.environ.get("ANKITUI_SYNC_TEST_URL"), reason="set ANKITUI_SYNC_TEST_URL to run against a real Anki sync server"
+)
+async def test_sync_with_anki_library(tmp_path, monkeypatch):
+    pytest.importorskip("anki")
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "cfg"))
+    from ankitui.ui.sync import FullSyncChoice, SyncScreen, store_auth
+    from ankitui.core.ankilib_sync import login
+
+    url = os.environ["ANKITUI_SYNC_TEST_URL"]
+    user, password = os.environ.get("ANKITUI_SYNC_TEST_USER", "alice:secret").split(":", 1)
+    app = make_app(tmp_path)
+    async with app.run_test(size=(120, 40)) as pilot:
+        add_basic(app.col, "via library")
+        hkey, endpoint = login(user, password, url)
+        store_auth(app, user, hkey, endpoint)
+        app.settings["sync_backend"] = "auto"
+        await pilot.press("y")
+        for _ in range(100):
+            await pilot.pause(0.1)
+            if isinstance(app.screen, FullSyncChoice):
+                app.screen.upload()
+            if isinstance(app.screen, SyncScreen) and not app.screen.running:
+                break
+        assert app.screen.use_library
+        assert "Collection uploaded" in str(app.screen.query_one("#sync-messages").render())
+        assert app.col is not None and app.col.note_count() == 1

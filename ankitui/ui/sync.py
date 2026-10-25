@@ -19,8 +19,14 @@ from ..core.sync import (
     login,
     media_db_path,
 )
+from ..core import ankilib_sync
 from .icons import icon
 from .settings import save_settings
+
+
+def use_anki_library(app) -> bool:
+    """Sync with the official anki library when installed, unless the built-in client was chosen."""
+    return app.settings.get("sync_backend", "auto") != "builtin" and ankilib_sync.available()
 
 
 def sync_auth(app) -> dict | None:
@@ -95,7 +101,10 @@ class LoginScreen(ModalScreen[bool]):
     @work(thread=True, exclusive=True)
     def _login(self, username: str, password: str, endpoint: str | None) -> None:
         try:
-            hkey = login(username, password, endpoint)
+            if use_anki_library(self.app):
+                hkey, endpoint = ankilib_sync.login(username, password, endpoint)
+            else:
+                hkey = login(username, password, endpoint)
         except SyncError as err:
             self.app.call_from_thread(self._failed, str(err))
             return
@@ -171,6 +180,8 @@ class SyncScreen(ModalScreen[bool]):
         self.on_done = on_done
         self.running = False
         self.collection_replaced = False
+        self.session: ankilib_sync.AnkiLibSession | None = None
+        self.use_library = False
 
     def compose(self) -> ComposeResult:
         auth = sync_auth(self.app) or {}
@@ -185,7 +196,33 @@ class SyncScreen(ModalScreen[bool]):
     def on_mount(self) -> None:
         self.lines: list[Text] = []
         self.running = True
-        self._run_collection_sync()
+        self.use_library = use_anki_library(self.app)
+        if self.use_library:
+            self.log_line("Using the official Anki library for syncing.", "dim")
+            # the library needs exclusive access to the collection file
+            self.app.col.close()
+            self.app.col = None
+            self._lib_collection_sync()
+        else:
+            self._run_collection_sync()
+
+    def _auth(self) -> tuple[str, str | None]:
+        auth = sync_auth(self.app)
+        return auth["hkey"], auth.get("endpoint")
+
+    @work(thread=True, exclusive=True, group="sync")
+    def _lib_collection_sync(self) -> None:
+        try:
+            hkey, endpoint = self._auth()
+            self.session = ankilib_sync.AnkiLibSession(self.app.collection_path, hkey, endpoint, self._progress)
+            result = self.session.sync_collection()
+        except SyncError as err:
+            self.app.call_from_thread(self._error, err)
+            return
+        except Exception as err:
+            self.app.call_from_thread(self._error, SyncError(f"{type(err).__name__}: {err}"))
+            return
+        self.app.call_from_thread(self._after_collection_sync, result, endpoint)
 
     def log_line(self, message: str, style: str = "") -> None:
         self.lines.append(Text(message, style=style))
@@ -229,7 +266,10 @@ class SyncScreen(ModalScreen[bool]):
                     lambda choice: self._run_full(choice, result.media_usn) if choice else self._finish(False),
                 )
             return
-        if result.action == "no_changes":
+        if self.use_library:
+            # the library performs the incremental sync itself
+            self.log_line(icon("check") + "Collection synced.", "green")
+        elif result.action == "no_changes":
             self.log_line(icon("check") + "Collection is up to date.", "green")
         else:
             stats = result.stats
@@ -245,6 +285,17 @@ class SyncScreen(ModalScreen[bool]):
 
     @work(thread=True, exclusive=True, group="sync")
     def _full_worker(self, direction: str, media_usn: int | None) -> None:
+        if self.use_library:
+            try:
+                self.session.full_sync(direction == "upload", media_usn)
+            except SyncError as err:
+                self.app.call_from_thread(self._error, err)
+                return
+            except Exception as err:
+                self.app.call_from_thread(self._error, SyncError(f"{type(err).__name__}: {err}"))
+                return
+            self.app.call_from_thread(self._after_full, direction, media_usn)
+            return
         try:
             syncer = CollectionSyncer(self.app.col, self._client(), self._progress)
             if direction == "upload":
@@ -263,7 +314,8 @@ class SyncScreen(ModalScreen[bool]):
 
     def _after_full(self, direction: str, media_usn: int | None) -> None:
         if direction == "download":
-            self.app.open_collection()
+            if not self.use_library:
+                self.app.open_collection()
             self.collection_replaced = True
             self.log_line(icon("check") + "Collection downloaded from AnkiWeb.", "green")
         else:
@@ -278,6 +330,15 @@ class SyncScreen(ModalScreen[bool]):
 
     @work(thread=True, exclusive=True, group="sync")
     def _media_worker(self, media_usn: int | None) -> None:
+        if self.use_library:
+            try:
+                self.session.sync_media()
+            except Exception as err:
+                self.app.call_from_thread(self.log_line, f"Media sync failed: {err}", "red")
+            else:
+                self.app.call_from_thread(self.log_line, icon("check") + "Media synced.", "green")
+            self.app.call_from_thread(self._finish, True)
+            return
         col = self.app.col
         try:
             stats = MediaSyncer(col.media_dir, media_db_path(col), self._client(), self._progress).sync(media_usn)
@@ -309,6 +370,15 @@ class SyncScreen(ModalScreen[bool]):
         self._finish(False)
 
     def _finish(self, ok: bool) -> None:
+        if self.use_library:
+            if self.session is not None:
+                try:
+                    self.session.close()
+                except Exception as err:
+                    self.log_line(f"Closing the collection failed: {err}", "red")
+                self.session = None
+            if self.app.col is None:
+                self.app.open_collection()
         self.running = False
         self.query_one("#sync-busy").display = False
         close = self.query_one("#close", Button)

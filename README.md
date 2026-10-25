@@ -97,16 +97,27 @@ self-hosted server, tick "Use a self-hosted sync server" on the login screen.
 - Media files are synced after the collection. You can turn media sync off in
   the `m` menu, which also has "Sync when AnkiTUI starts" and "Log out".
 
-AnkiTUI uses the same sync protocol (v11) as current Anki versions. It was
-tested against Anki's own sync server (`python -m anki.syncserver`), with the
-official Anki client syncing alongside.
+#### Two sync engines
 
-**AnkiWeb may refuse AnkiTUI.** AnkiWeb only accepts sync clients approved by
-the Anki developers (Anki, AnkiMobile, AnkiDroid and a few others), and AnkiTUI
-is not one of them. If a sync fails with "Server error 400", that is the likely
-reason. Syncing works with a [self-hosted sync
-server](https://docs.ankiweb.net/sync-server.html), which Anki desktop and
-AnkiDroid can also use, so all your devices can share it.
+- **The Anki library (recommended for AnkiWeb).** When the official `anki`
+  Python package is installed (`pip install "ankitui[ankiweb]"`, or with uv:
+  `uv sync --extra ankiweb`), AnkiTUI syncs through it. This is Anki's own
+  sync code, the same Rust core Anki desktop and AnkiDroid use, so AnkiWeb sees
+  a regular Anki client. During a sync the collection is opened with the
+  library, and afterwards it is converted back to the format AnkiTUI uses.
+- **The built-in client.** Without the `anki` package, AnkiTUI uses its own
+  implementation of the same sync protocol (v11). It works with Anki's
+  [self-hosted sync server](https://docs.ankiweb.net/sync-server.html), but
+  AnkiWeb answers it with "Server error 400". AnkiWeb only accepts approved
+  clients, and a client that identifies itself as AnkiTUI is not one of them.
+
+The engine can be switched in the `m` menu ("Sync engine"). Whether AnkiWeb's
+[terms](https://ankiweb.net/account/terms) cover third-party apps that use the
+official library is for you to judge. Using a self-hosted server avoids the
+question.
+
+Both engines were tested against Anki's own sync server
+(`python -m anki.syncserver`), with the official Anki client syncing alongside.
 
 ### Icons
 
@@ -162,7 +173,7 @@ To run the sync integration test against a real Anki sync server:
 ```bash
 pip install anki
 SYNC_USER1=alice:secret SYNC_PORT=27701 python -m anki.syncserver &
-ANKITUI_SYNC_TEST_URL=http://127.0.0.1:27701/ pytest tests/test_sync.py
+ANKITUI_SYNC_TEST_URL=http://127.0.0.1:27701/ pytest tests/test_sync.py tests/test_ui.py
 ```
 
 ## License
