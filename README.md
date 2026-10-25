@@ -9,7 +9,12 @@ to Python.
 ## Features
 
 - **Decks**: deck list with New / Learn / Due counts, subdecks (`Parent::Child`),
-  collapse/expand, create, rename, delete.
+  collapse/expand, create. Each deck has its own page (`v`) with its counts and
+  all of its actions: study, custom study, options, add cards, browse,
+  statistics, rename, export, delete, and rebuild/empty for filtered decks.
+- **Settings** (`,`): AnkiWeb account (log in / log out), sync options and the
+  sync engine, icons and theme, and the collection-wide study options (next day
+  start hour, learn ahead limit, new cards ignore review limit, parent limits).
 - **Notes and cards**: add and edit notes. The stock note types are included
   (Basic, Basic (and reversed card), Basic (optional reversed card),
   Basic (type in the answer), Cloze). You can manage note types (fields, card
@@ -83,8 +88,8 @@ You can also set the collection path with `ANKITUI_COLLECTION`.
 
 ### Syncing with AnkiWeb
 
-Press `y` in the deck list (or pick "Sync with AnkiWeb" from `Ctrl+P` or the
-`m` menu). The first time, you log in with your AnkiWeb ID and password. As in
+Press `y` in the deck list (or pick "Sync with AnkiWeb" from `Ctrl+P` or
+"Sync Now" in Settings, `,`). The first time, you log in with your AnkiWeb ID and password. As in
 Anki, the password is not stored: AnkiTUI keeps only the sync key the server
 returns, in `~/.config/ankitui/settings.json` (readable only by you). To use a
 self-hosted server, tick "Use a self-hosted sync server" on the login screen.
@@ -94,8 +99,9 @@ self-hosted server, tick "Use a self-hosted sync server" on the login screen.
   upload this collection or download the one on AnkiWeb. If one side is empty,
   this happens automatically.
 - After that, syncs are incremental and merge changes from all your devices.
-- Media files are synced after the collection. You can turn media sync off in
-  the `m` menu, which also has "Sync when AnkiTUI starts" and "Log out".
+- Media files are synced after the collection. Settings (`,`) has switches for
+  media sync and "Sync when AnkiTUI starts", and the "Log Out" button, which
+  forgets the stored sync key (also "Log out of AnkiWeb" in `Ctrl+P`).
 
 #### Two sync engines
 
@@ -111,7 +117,7 @@ self-hosted server, tick "Use a self-hosted sync server" on the login screen.
   AnkiWeb answers it with "Server error 400". AnkiWeb only accepts approved
   clients, and a client that identifies itself as AnkiTUI is not one of them.
 
-The engine can be switched in the `m` menu ("Sync engine"). Whether AnkiWeb's
+The engine can be switched in Settings ("Sync engine"). Whether AnkiWeb's
 [terms](https://ankiweb.net/account/terms) cover third-party apps that use the
 official library is for you to judge. Using a self-hosted server avoids the
 question.
@@ -128,7 +134,8 @@ any of these ways:
 
 - `ankitui --no-icons`
 - `ANKITUI_ICONS=0 ankitui`
-- the "Toggle Nerd Font icons" command (`Ctrl+P`, or `m` in the deck list)
+- the "Nerd Font icons" switch in Settings (`,`), or the "Toggle Nerd Font
+  icons" command (`Ctrl+P`)
 
 The choice and the theme are saved in `~/.config/ankitui/settings.json`.
 
@@ -136,8 +143,9 @@ The choice and the theme are saved in `~/.config/ankitui/settings.json`.
 
 | Screen | Keys |
 | --- | --- |
-| Deck list | `Enter` study, `y` sync, `v` overview, `a` add, `b` browse, `s` statistics, `n` new deck, `f` filtered deck, `c` custom study, `o` options, `r` rename, `Del` delete, `Space` collapse, `i` import, `e` export, `u` undo, `m` more, `q` quit |
-| Overview | `s`/`Enter` study, `c` custom study, `o` options, `t` statistics, `u` unbury, `Esc` back |
+| Deck list | `Enter` study, `v` deck page, `y` sync, `a` add, `b` browse, `s` statistics, `n` new deck, `f` filtered deck, `Space` collapse, `i` import, `u` undo, `,` settings, `q` quit |
+| Deck page | `s`/`Enter` study, `c` custom study, `o` options, `t` statistics, `a` add, `b` browse, `n` rename, `e` export, `Del` delete, `r`/`E` rebuild/empty (filtered), `u` unbury, `Esc` back |
+| Settings | `y` sync, `Esc` back |
 | Statistics | `d` deck/collection, `p` period, `r` refresh |
 | Everywhere | `?`/`F1` shortcuts, `Ctrl+P` command palette, `Ctrl+Q` quit |
 | Reviewer | `Space`/`Enter` show answer, then Good; `1`–`4` answer; `u` undo; `e` edit; `*` mark; `-` bury card; `=` bury note; `@` suspend card; `!` suspend note; `f` flag; `i` card info; `Ctrl+D` delete note; `m` more |

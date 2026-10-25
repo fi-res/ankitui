@@ -65,6 +65,7 @@ _ICONS: dict[str, tuple[str, str]] = {
     "sync": ("\uf0c2", "⇅"),          # cloud
     "user": ("\uf007", "@"),          # user
     "logout": ("\uf08b", "⇥"),        # sign-out
+    "settings": ("\uf1de", "☰"),      # sliders
 }
 
 _enabled = True

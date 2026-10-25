@@ -228,3 +228,80 @@ async def test_sync_with_anki_library(tmp_path, monkeypatch):
         assert app.screen.use_library
         assert "Collection uploaded" in str(app.screen.query_one("#sync-messages").render())
         assert app.col is not None and app.col.note_count() == 1
+
+
+async def test_settings_screen(tmp_path, monkeypatch):
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "cfg"))
+    from ankitui.ui.dialogs import ConfirmDialog
+    from ankitui.ui.settings_screen import SettingsScreen
+    from ankitui.ui.sync import store_auth
+
+    app = make_app(tmp_path)
+    async with app.run_test(size=(120, 50)) as pilot:
+        store_auth(app, "alice", "HKEY", None)
+        mod = app.col.mod
+        await pilot.press("comma")
+        await pilot.pause()
+        screen = app.screen
+        assert isinstance(screen, SettingsScreen)
+        # opening the screen must not modify the collection
+        assert app.col.mod == mod
+        assert "alice" in str(screen.query_one("#account-status").render())
+        assert screen.query_one("#logout").display and not screen.query_one("#login").display
+
+        screen.query_one("#sync-media").value = False
+        screen.query_one("#parent-limits").value = True
+        screen.query_one("#rollover").value = "6"
+        screen.query_one("#learn-ahead").value = "5000"
+        await pilot.pause()
+        assert app.settings["sync_media"] is False
+        assert app.col.conf["applyAllParentLimits"] is True
+        assert app.col.conf["rollover"] == 6
+        assert app.col.conf["collapseTime"] == 1200  # out of range values are rejected
+        assert "between" in str(screen.query_one("#study-error").render())
+
+        screen.logout()
+        await pilot.pause()
+        assert isinstance(app.screen, ConfirmDialog)
+        app.screen.dismiss(True)
+        await pilot.pause()
+        assert "sync" not in app.settings
+        assert screen.query_one("#login").display
+        await pilot.press("escape")
+        await pilot.pause()
+        assert not isinstance(app.screen, SettingsScreen)
+
+
+async def test_deck_page_actions(tmp_path):
+    from ankitui.ui.deck_picker import DeckPickerScreen
+    from ankitui.ui.dialogs import ConfirmDialog, PromptDialog
+
+    app = make_app(tmp_path)
+    async with app.run_test(size=(120, 50)) as pilot:
+        did = app.col.add_normal_deck("Spanish")
+        add_basic(app.col, "hola", "hello", did=did)
+        app.screen.refresh_decks(did)
+        await pilot.press("v")
+        await pilot.pause()
+        assert isinstance(app.screen, OverviewScreen)
+
+        await pilot.press("n")
+        await pilot.pause()
+        assert isinstance(app.screen, PromptDialog)
+        app.screen.dismiss("Languages::Spanish")
+        await pilot.pause()
+        assert app.col.get_deck(did)["name"] == "Languages::Spanish"
+
+        await pilot.press("e")
+        await pilot.pause()
+        assert isinstance(app.screen, ExportScreen) and app.screen.did == did
+        await pilot.press("escape")
+        await pilot.pause()
+
+        await pilot.press("delete")
+        await pilot.pause()
+        assert isinstance(app.screen, ConfirmDialog)
+        app.screen.dismiss(True)
+        await pilot.pause()
+        assert app.col.get_deck(did) is None
+        assert isinstance(app.screen, DeckPickerScreen)

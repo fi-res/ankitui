@@ -146,6 +146,47 @@ ModalScreen {
     margin-right: 1;
 }
 
+#deck-actions {
+    width: 80;
+    max-width: 100%;
+    height: auto;
+    border: round $primary-darken-2;
+    padding: 0 2;
+    margin-top: 1;
+}
+
+.deck-actions-row {
+    height: auto;
+}
+
+.deck-actions-row Button {
+    margin-right: 1;
+}
+
+/* ------------------------------------------------------------- settings */
+
+#settings {
+    padding: 1 2;
+}
+
+#settings .opt-row Switch {
+    width: auto;
+}
+
+.settings-buttons {
+    height: auto;
+    margin: 1 0;
+}
+
+.settings-buttons Button {
+    margin-right: 1;
+}
+
+#account-status {
+    height: auto;
+    padding-left: 2;
+}
+
 /* ------------------------------------------------------------- reviewer */
 
 #review-top {

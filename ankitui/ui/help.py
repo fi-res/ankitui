@@ -14,10 +14,15 @@ from .icons import icon
 
 SECTIONS = [
     ("deck", "Deck list", [
-        ("Enter", "Study the selected deck"), ("v", "Deck overview"), ("a", "Add note"),
+        ("Enter", "Study the selected deck"), ("v", "Deck page (deck actions)"), ("a", "Add note"),
         ("b", "Browse cards"), ("s", "Statistics"), ("n", "Create deck"), ("f", "Create filtered deck"),
         ("c", "Custom study"), ("o", "Deck options"), ("r", "Rename deck"), ("Del / x", "Delete deck"),
-        ("Space", "Collapse / expand"), ("y", "Sync with AnkiWeb"), ("i / e", "Import / export"), ("u", "Undo"), ("m", "More actions"),
+        ("Space", "Collapse / expand"), ("y", "Sync with AnkiWeb"), ("i / e", "Import / export"), ("u", "Undo"), (",", "Settings (account, sync, appearance)"),
+    ]),
+    ("deck", "Deck page", [
+        ("s / Enter", "Study now"), ("c", "Custom study"), ("o", "Deck options"), ("t", "Statistics"),
+        ("a", "Add cards"), ("b", "Browse"), ("n", "Rename"), ("e", "Export"), ("Del / x", "Delete"),
+        ("r / E", "Rebuild / empty a filtered deck"), ("u", "Unbury"), ("Esc", "Back"),
     ]),
     ("study", "Reviewer", [
         ("Space / Enter", "Show answer, then answer Good"), ("1 2 3 4", "Again / Hard / Good / Easy"),

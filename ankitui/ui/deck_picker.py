@@ -16,7 +16,7 @@ from ..core.sched.scheduler import DeckNode
 from ..core.search import escape_search_value
 from ..core.stats import Stats
 from .charts import proportion_bar
-from .dialogs import ChoiceDialog, ConfirmDialog, MessageDialog, PromptDialog
+from .dialogs import ConfirmDialog, PromptDialog
 from .icons import icon
 
 NEW_COLOR = "dodger_blue1"
@@ -48,22 +48,22 @@ def deck_query(col, did: int | None) -> str:
 class DeckPickerScreen(Screen):
     BINDINGS = [
         Binding("enter", "study", "Study", show=True),
-        Binding("v", "overview", "Overview", show=False),
+        Binding("v", "overview", "Deck"),
         Binding("a", "add", "Add"),
         Binding("b", "browse", "Browse"),
         Binding("s", "stats", "Stats"),
         Binding("n", "new_deck", "New deck"),
         Binding("f", "new_filtered", "Filtered deck", show=False),
         Binding("c", "custom_study", "Custom study", show=False),
-        Binding("o", "options", "Options"),
+        Binding("o", "options", "Options", show=False),
         Binding("r", "rename", "Rename", show=False),
         Binding("delete,x", "delete", "Delete", show=False),
         Binding("space", "toggle_collapse", "Collapse", show=False),
         Binding("y", "sync", "Sync"),
         Binding("i", "import", "Import"),
-        Binding("e", "export", "Export"),
+        Binding("e", "export", "Export", show=False),
         Binding("u,ctrl+z", "undo", "Undo", show=False),
-        Binding("m", "manage", "More"),
+        Binding("comma,m", "settings", "Settings", key_display=","),
         Binding("f5", "refresh", "Refresh", show=False),
         Binding("q", "app.quit", "Quit"),
     ]
@@ -411,12 +411,6 @@ class DeckPickerScreen(Screen):
 
         self.app.push_screen(ExportScreen(self.selected_did()))
 
-    @staticmethod
-    def _anki_lib() -> bool:
-        from ..core import ankilib_sync
-
-        return ankilib_sync.available()
-
     def action_sync(self) -> None:
         from .sync import start_sync
 
@@ -434,100 +428,5 @@ class DeckPickerScreen(Screen):
         self.col.sched.clear_queues()
         self.refresh_decks()
 
-    def action_manage(self) -> None:
-        did = self.selected_did()
-        choices = [
-            ("rename", icon("edit") + "Rename deck"),
-            ("delete", icon("trash") + "Delete deck"),
-            ("filtered", icon("filtered") + "Create filtered deck"),
-            ("custom", icon("custom") + "Custom study"),
-            ("unbury", icon("unbury") + "Unbury cards in deck"),
-            ("notetypes", icon("notetype") + "Manage note types"),
-            ("sync", icon("sync") + "Sync with AnkiWeb"),
-            ("sync_media", icon("sync") + f"Sync media: {'on' if self.app.settings.get('sync_media', True) else 'off'}"),
-            ("sync_start", icon("sync") + f"Sync when AnkiTUI starts: {'on' if self.app.settings.get('sync_on_start') else 'off'}"),
-            ("sync_backend", icon("sync") + "Sync engine: " + (
-                "built-in" if self.app.settings.get("sync_backend") == "builtin"
-                else ("Anki library" if self._anki_lib() else "built-in (anki library not installed)"))),
-            ("icons", icon("theme") + "Toggle Nerd Font icons"),
-            ("help", icon("help") + "Keyboard shortcuts"),
-            ("about", icon("info") + "About AnkiTUI"),
-        ]
-        from .sync import sync_auth
-
-        auth = sync_auth(self.app)
-        if auth:
-            choices.insert(choices.index(("sync", icon("sync") + "Sync with AnkiWeb")) + 1,
-                           ("logout", icon("logout") + f"Log out ({auth.get('username', '')})"))
-        if did is not None and self.col.get_deck(did)["dyn"]:
-            choices = [
-                ("rebuild", icon("rebuild") + "Rebuild filtered deck"),
-                ("empty", icon("empty") + "Empty filtered deck"),
-            ] + choices
-
-        def done(key: str | None) -> None:
-            if key == "rename":
-                self.action_rename()
-            elif key == "delete":
-                self.action_delete()
-            elif key == "filtered":
-                self.action_new_filtered()
-            elif key == "custom":
-                self.action_custom_study()
-            elif key == "unbury" and did is not None:
-                self.col.sched.unbury_deck(did)
-                self.refresh_decks()
-            elif key == "rebuild" and did is not None:
-                n = self.col.sched.rebuild_filtered_deck(did)
-                self.notify(f"Rebuilt: {n} cards")
-                self.refresh_decks()
-            elif key == "empty" and did is not None:
-                self.col.sched.empty_filtered_deck(did)
-                self.refresh_decks()
-            elif key == "sync":
-                self.action_sync()
-            elif key in ("sync_media", "sync_start"):
-                setting = {"sync_media": "sync_media", "sync_start": "sync_on_start"}[key]
-                default = key == "sync_media"
-                self.app.settings[setting] = not self.app.settings.get(setting, default)
-                from .settings import save_settings
-
-                save_settings(self.app.settings)
-                self.notify(f"{'Sync media' if key == 'sync_media' else 'Sync on start'}: {'on' if self.app.settings[setting] else 'off'}")
-            elif key == "sync_backend":
-                from .settings import save_settings
-
-                builtin = self.app.settings.get("sync_backend") == "builtin"
-                self.app.settings["sync_backend"] = "auto" if builtin else "builtin"
-                save_settings(self.app.settings)
-                if builtin and not self._anki_lib():
-                    self.notify("Install the anki package (pip install anki) to sync with the Anki library.", severity="warning")
-                else:
-                    self.notify("Sync engine: " + ("Anki library" if builtin else "built-in"))
-            elif key == "logout":
-                from .sync import logout
-
-                logout(self.app)
-                self.notify("Logged out of AnkiWeb")
-                self.refresh_decks()
-            elif key == "notetypes":
-                from .notetypes import NotetypesScreen
-
-                self.app.push_screen(NotetypesScreen())
-            elif key == "icons":
-                self.app.action_toggle_icons()
-            elif key == "help":
-                self.app.action_help()
-            elif key == "about":
-                from .. import __version__
-
-                self.app.push_screen(
-                    MessageDialog(
-                        "About",
-                        f"AnkiTUI {__version__}\n\nA terminal client for Anki collections.\n"
-                        f"Collection: {self.col.path}\n\nThe scheduler is a port of the Anki/AnkiDroid "
-                        "v3 (SM-2) scheduler. Collections are stored in Anki's schema 11 format.",
-                    )
-                )
-
-        self.app.push_screen(ChoiceDialog("Deck actions", choices), done)
+    def action_settings(self) -> None:
+        self.app.action_open_settings()

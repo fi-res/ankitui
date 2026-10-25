@@ -16,6 +16,7 @@ from ..core.stats import Stats
 from ..core.utils import strip_html
 from .charts import proportion_bar
 from .deck_picker import LEARN_COLOR, NEW_COLOR, REVIEW_COLOR, deck_query
+from .dialogs import ConfirmDialog, PromptDialog
 from .icons import icon
 
 
@@ -33,11 +34,14 @@ class OverviewScreen(Screen):
         Binding("c", "custom_study", "Custom study"),
         Binding("o", "options", "Options"),
         Binding("t", "stats", "Stats"),
+        Binding("a", "add", "Add", show=False),
+        Binding("b", "browse", "Browse", show=False),
+        Binding("n", "rename", "Rename"),
+        Binding("e", "export", "Export", show=False),
+        Binding("delete,x", "delete", "Delete"),
         Binding("r", "rebuild", "Rebuild", show=False),
-        Binding("e", "empty", "Empty", show=False),
+        Binding("E", "empty", "Empty", show=False),
         Binding("u", "unbury", "Unbury", show=False),
-        Binding("a", "add", "Add"),
-        Binding("b", "browse", "Browse"),
     ]
 
     @property
@@ -59,10 +63,20 @@ class OverviewScreen(Screen):
                 with Horizontal(id="overview-buttons"):
                     yield Button("Study Now", variant="primary", id="study")
                     yield Button("Custom Study", id="custom")
-                    yield Button("Options", id="options")
                     yield Button("Rebuild", id="rebuild")
                     yield Button("Empty", id="empty")
                     yield Button("Unbury", id="unbury")
+            with Vertical(id="deck-actions"):
+                yield Static("", id="deck-actions-title")
+                with Horizontal(classes="deck-actions-row"):
+                    yield Button("Options", id="options")
+                    yield Button("Add", id="add")
+                    yield Button("Browse", id="browse")
+                    yield Button("Stats", id="stats")
+                with Horizontal(classes="deck-actions-row"):
+                    yield Button("Rename", id="rename")
+                    yield Button("Export", id="export")
+                    yield Button("Delete", variant="error", id="delete")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -146,7 +160,19 @@ class OverviewScreen(Screen):
         study.label = icon("study") + "Study Now"
         study.disabled = nothing_due
         self.query_one("#custom", Button).label = icon("custom") + "Custom Study"
-        self.query_one("#options", Button).label = icon("options") + "Options"
+        for ident, ico, label in (
+            ("options", "options", "Options"),
+            ("add", "add", "Add Cards"),
+            ("browse", "browse", "Browse"),
+            ("stats", "stats", "Statistics"),
+            ("rename", "edit", "Rename"),
+            ("export", "export", "Export"),
+            ("delete", "trash", "Delete"),
+        ):
+            self.query_one(f"#{ident}", Button).label = icon(ico) + label
+        self.query_one("#deck-actions-title", Static).update(
+            Text(icon("deck") + ("Filtered deck" if is_filtered else "Deck"), style="bold")
+        )
         self.query_one("#rebuild", Button).label = icon("rebuild") + "Rebuild"
         self.query_one("#empty", Button).label = icon("empty") + "Empty"
         self.query_one("#unbury", Button).label = icon("unbury") + "Unbury"
@@ -209,17 +235,62 @@ class OverviewScreen(Screen):
         self.col.sched.unbury_deck(self.col.current_deck_id())
         self.refresh_view()
 
+    @on(Button.Pressed, "#stats")
     def action_stats(self) -> None:
         from .stats import StatsScreen
 
         self.app.push_screen(StatsScreen(self.col.current_deck_id()))
 
+    @on(Button.Pressed, "#add")
     def action_add(self) -> None:
         from .note_editor import AddNoteScreen
 
         self.app.push_screen(AddNoteScreen(deck_id=self.col.current_deck_id()))
 
+    @on(Button.Pressed, "#browse")
     def action_browse(self) -> None:
         from .browser import BrowserScreen
 
         self.app.push_screen(BrowserScreen(deck_query(self.col, self.col.current_deck_id())))
+
+    @on(Button.Pressed, "#rename")
+    def action_rename(self) -> None:
+        did = self.col.current_deck_id()
+        deck = self.col.get_deck(did)
+
+        def done(name: str | None) -> None:
+            if not name or name == deck["name"]:
+                return
+            try:
+                self.col.rename_deck(did, name)
+            except ValueError as err:
+                self.notify(str(err), severity="error")
+                return
+            self.refresh_view()
+
+        self.app.push_screen(PromptDialog("Rename Deck", "New name (use :: for subdecks):", deck["name"]), done)
+
+    @on(Button.Pressed, "#export")
+    def action_export(self) -> None:
+        from .import_export import ExportScreen
+
+        self.app.push_screen(ExportScreen(self.col.current_deck_id()))
+
+    @on(Button.Pressed, "#delete")
+    def action_delete(self) -> None:
+        did = self.col.current_deck_id()
+        deck = self.col.get_deck(did)
+        if deck["dyn"]:
+            msg = f"Delete filtered deck '{deck['name']}'? Its cards will return to their original decks."
+        else:
+            ids = ",".join(str(d) for d in self.col.child_ids(did, include_self=True))
+            n = self.col.db.execute(f"SELECT count() FROM cards WHERE did IN ({ids}) OR odid IN ({ids})").fetchone()[0]
+            msg = f"Delete deck '{deck['name']}' including its subdecks and {n} card(s)? This cannot be undone."
+
+        def done(ok: bool) -> None:
+            if ok:
+                self.col.remove_deck(did)
+                self.notify(f"Deleted {deck['name']}")
+                self.app.pop_screen()
+
+        self.app.push_screen(ConfirmDialog("Delete Deck", msg, yes="Delete", danger=True), done)

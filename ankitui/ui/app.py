@@ -131,6 +131,12 @@ class AnkiTUI(App):
 
         self.push_screen(NotetypesScreen())
 
+    def action_open_settings(self) -> None:
+        from .settings_screen import SettingsScreen
+
+        if not isinstance(self.screen, SettingsScreen):
+            self.push_screen(SettingsScreen())
+
     def action_sync(self) -> None:
         from .sync import start_sync
 
@@ -149,6 +155,7 @@ class AnkiTUI(App):
         yield SystemCommand("Add note", "Add a new note", self.action_add_note)
         yield SystemCommand("Browse cards", "Search and edit cards", self.action_open_browser)
         yield SystemCommand("Statistics", "Show study statistics", self.action_open_stats)
+        yield SystemCommand("Settings", "Account, sync, appearance and study options", self.action_open_settings)
         yield SystemCommand("Note types", "Manage note types, fields and templates", self.action_open_notetypes)
         yield SystemCommand("Sync with AnkiWeb", "Synchronise the collection and media", self.action_sync)
         if (self.settings.get("sync") or {}).get("hkey"):
