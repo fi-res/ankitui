@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 
+from rich.text import Text
 from textual import on
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -107,7 +108,7 @@ class ChoiceDialog(ModalScreen[str | None]):
 
     BINDINGS = [Binding("escape", "cancel", "Cancel")]
 
-    def __init__(self, title: str, choices: list[tuple[str, str]], message: str = ""):
+    def __init__(self, title: str, choices: list[tuple[str, str | Text]], message: str = ""):
         super().__init__()
         self.title_text = title
         self.choices = choices

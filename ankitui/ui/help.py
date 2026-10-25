@@ -28,14 +28,15 @@ SECTIONS = [
         ("Space / Enter", "Show answer, then answer Good"), ("1 2 3 4", "Again / Hard / Good / Easy"),
         ("u", "Undo"), ("e", "Edit note"), ("*", "Mark note"), ("-", "Bury card"), ("=", "Bury note"),
         ("@", "Suspend card"), ("!", "Suspend note"), ("f", "Flag card"), ("i", "Card info"),
-        ("Ctrl+D", "Delete note"), ("Esc", "Back"),
+        ("o", "Deck options"), ("Ctrl+D", "Delete note"), ("Esc", "Back"),
     ]),
     ("edit", "Note editor", [
         ("Ctrl+S", "Add / save"), ("Ctrl+L", "Wrap selection in a cloze"), ("Ctrl+P", "Preview"), ("Tab", "Next field"),
+        ("Ctrl+D", "Delete note (when editing)"), ("Ctrl+R", "Reset card to new (from the reviewer)"),
     ]),
     ("browse", "Browser", [
         ("/", "Search"), ("Enter / e", "Edit note"), ("s", "Suspend / unsuspend"), ("d", "Change deck"),
-        ("t / T", "Add / remove tags"), ("m", "Mark"), ("r", "Reset to new"), ("u", "Set due date"),
+        ("t / T", "Add / remove tags"), ("m", "Mark"), ("f", "Flag"), ("r", "Reset to new"), ("u", "Set due date"),
         ("o", "Sort"), ("Del", "Delete note"),
     ]),
     ("stats", "Statistics", [("d", "Deck / whole collection"), ("p", "Change period"), ("r", "Refresh")]),

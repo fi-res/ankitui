@@ -26,7 +26,7 @@ from .icons import icon
 from .render import html_to_text
 
 FLAG_NAMES = {0: "No flag", 1: "Red", 2: "Orange", 3: "Green", 4: "Blue", 5: "Pink", 6: "Turquoise", 7: "Purple"}
-FLAG_COLORS = {1: "red", 2: "dark_orange", 3: "green", 4: "blue", 5: "hot_pink", 6: "turquoise2", 7: "purple"}
+FLAG_COLORS = {1: "#ef4444", 2: "#f97316", 3: "#22c55e", 4: "#3b82f6", 5: "#ec4899", 6: "#14b8a6", 7: "#a855f7"}
 
 
 class ReviewerScreen(Screen):
@@ -40,14 +40,14 @@ class ReviewerScreen(Screen):
         Binding("u,ctrl+z", "undo", "Undo"),
         Binding("e", "edit", "Edit"),
         Binding("asterisk", "mark", "Mark"),
-        Binding("minus", "bury_card", "Bury"),
-        Binding("equals_sign", "bury_note", "Bury note", show=False),
-        Binding("at", "suspend_card", "Suspend"),
-        Binding("exclamation_mark", "suspend_note", "Suspend note", show=False),
         Binding("f", "flag", "Flag"),
+        Binding("minus", "bury_card", "Bury"),
+        Binding("at", "suspend_card", "Suspend"),
+        Binding("equals_sign", "bury_note", "Bury note", show=False),
+        Binding("exclamation_mark", "suspend_note", "Suspend note", show=False),
         Binding("i", "card_info", "Info"),
+        Binding("o", "options", "Options", show=False),
         Binding("ctrl+delete,ctrl+d", "delete_note", "Delete", show=False),
-        Binding("m", "more", "More..."),
     ]
 
     def __init__(self) -> None:
@@ -266,7 +266,7 @@ class ReviewerScreen(Screen):
         # let digits and symbols reach the type-in-answer box
         if isinstance(self.focused, Input) and action in (
             "answer", "mark", "bury_card", "bury_note", "suspend_card", "suspend_note", "flag",
-            "edit", "undo", "card_info", "more", "primary",
+            "edit", "undo", "card_info", "options", "delete_note", "primary",
         ):
             return False
         return True
@@ -288,9 +288,18 @@ class ReviewerScreen(Screen):
             return
         from .note_editor import EditNoteScreen
 
-        def done(_saved) -> None:
+        editor = EditNoteScreen(self.current.card.nid, card_id=self.current.card.id)
+
+        def done(result) -> None:
             if self.current is None:
                 return
+            if result in ("deleted", "reset"):
+                self.col.sched.clear_queues()
+                self.notify("Note deleted" if result == "deleted" else "Card reset to new")
+                self.next_card()
+                return
+            if editor.options_changed:
+                self.col.sched.clear_queues()
             card = self.col.get_card(self.current.card.id)
             if card is None:
                 self.col.sched.clear_queues()
@@ -300,7 +309,7 @@ class ReviewerScreen(Screen):
             self.render_card_content(answer=self.showing_answer)
             self.update_counts()
 
-        self.app.push_screen(EditNoteScreen(self.current.card.nid), done)
+        self.app.push_screen(editor, done)
 
     def action_mark(self) -> None:
         if self.current is None:
@@ -357,7 +366,8 @@ class ReviewerScreen(Screen):
     def action_flag(self) -> None:
         if self.current is None:
             return
-        choices = [(str(k), f"{k}: {v}") for k, v in FLAG_NAMES.items()]
+        current = self.current.card.user_flag
+        choices = [(str(k), flag_label(k, k == current)) for k in FLAG_NAMES]
 
         def done(key: str | None) -> None:
             if key is None or self.current is None:
@@ -375,37 +385,28 @@ class ReviewerScreen(Screen):
         if self.current:
             self.app.push_screen(MessageDialog("Card Info", card_info_text(self.col, self.current.card.id)))
 
-    def action_more(self) -> None:
-        choices = [
-            ("bury_note", "Bury note (=)"),
-            ("suspend_note", "Suspend note (!)"),
-            ("delete_note", "Delete note (Ctrl+D)"),
-            ("forget", "Reset card to new"),
-            ("options", "Deck options"),
-        ]
+    def action_options(self) -> None:
+        if self.current is None:
+            return
+        from .deck_options import DeckOptionsScreen
 
-        def done(key: str | None) -> None:
-            if key == "bury_note":
-                self.action_bury_note()
-            elif key == "suspend_note":
-                self.action_suspend_note()
-            elif key == "delete_note":
-                self.action_delete_note()
-            elif key == "forget" and self.current:
-                self.col.sched.forget_cards([self.current.card.id])
-                self._after_removal("Card reset to new")
-            elif key == "options" and self.current:
-                from .deck_options import DeckOptionsScreen
+        card = self.current.card
 
-                card = self.current.card
+        def reload(_) -> None:
+            self.col.sched.clear_queues()
+            self.next_card()
 
-                def reload(_):
-                    self.col.sched.clear_queues()
-                    self.next_card()
+        self.app.push_screen(DeckOptionsScreen(card.odid or card.did), reload)
 
-                self.app.push_screen(DeckOptionsScreen(card.odid or card.did), reload)
 
-        self.app.push_screen(ChoiceDialog("More actions", choices), done)
+def flag_label(flag: int, current: bool = False) -> Text:
+    """A flag menu entry: the flag icon in the flag's colour, then its name."""
+    label = Text()
+    label.append(icon("flag"), style=f"bold {FLAG_COLORS[flag]}" if flag else "dim")
+    label.append(FLAG_NAMES[flag], style="bold" if current else "")
+    if current:
+        label.append("  (current)", style="dim")
+    return label
 
 
 def card_info_text(col, cid: int) -> str:

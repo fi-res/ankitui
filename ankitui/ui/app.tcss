@@ -291,8 +291,12 @@ ModalScreen {
     margin-top: 1;
 }
 
-#editor-buttons Button {
+#editor-buttons Button, #editor-actions Button {
     margin-right: 1;
+}
+
+#editor-actions {
+    height: auto;
 }
 
 /* -------------------------------------------------------------- browser */

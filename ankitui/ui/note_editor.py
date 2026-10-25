@@ -68,7 +68,14 @@ class _NoteForm(Screen):
                 yield Button(icon("tag") + "Cloze [...]", id="cloze")
                 yield Button(icon("eye") + "Preview", id="preview")
                 yield Button(icon("times") + "Close", id="close")
+            extra = self.extra_buttons()
+            if extra:
+                with Horizontal(id="editor-actions"):
+                    yield from extra
         yield Footer()
+
+    def extra_buttons(self) -> list[Button]:
+        return []
 
     def deck_options(self) -> list[tuple[str, int]]:
         return [(d["name"], int(d["id"])) for d in self.col.all_decks() if not d["dyn"]]
@@ -265,13 +272,35 @@ class AddNoteScreen(_NoteForm):
 
 
 class EditNoteScreen(_NoteForm):
-    def __init__(self, nid: int):
+    """Edit a note. Opened from the reviewer (with card_id), it also has the card's actions.
+
+    Dismisses with True (saved), False (closed), "deleted" or "reset". options_changed
+    tells the caller that deck options were edited from here.
+    """
+
+    BINDINGS = [
+        Binding("ctrl+d", "delete_note", "Delete note", priority=True),
+        Binding("ctrl+r", "reset_card", "Reset card", show=False, priority=True),
+    ]
+
+    def __init__(self, nid: int, card_id: int | None = None):
         self.nid = nid
+        self.card_id = card_id
+        self.options_changed = False
         super().__init__()
 
     def compose(self) -> ComposeResult:
         self.note = self.col.get_note(self.nid)
         yield from super().compose()
+
+    def extra_buttons(self) -> list[Button]:
+        buttons = [Button(icon("trash") + "Delete Note", variant="error", id="delete-note")]
+        if self.card_id is not None:
+            buttons += [
+                Button(icon("rebuild") + "Reset Card to New", id="reset-card"),
+                Button(icon("options") + "Deck Options", id="deck-options"),
+            ]
+        return buttons
 
     def setup(self) -> None:
         self.title = "Edit Note"
@@ -289,3 +318,44 @@ class EditNoteScreen(_NoteForm):
         else:
             self.notify("Saved.")
         self.dismiss(True)
+
+    @on(Button.Pressed, "#delete-note")
+    def action_delete_note(self) -> None:
+        from .dialogs import ConfirmDialog
+
+        n = len(self.col.cards_of_note(self.nid))
+
+        def done(ok: bool) -> None:
+            if ok:
+                self.col.remove_notes([self.nid])
+                self.col.sched.clear_queues()
+                self.dismiss("deleted")
+
+        self.app.push_screen(
+            ConfirmDialog("Delete Note", f"Delete this note and its {n} card(s)?", yes="Delete", danger=True), done
+        )
+
+    @on(Button.Pressed, "#reset-card")
+    def action_reset_card(self) -> None:
+        if self.card_id is None:
+            return
+        from .dialogs import ConfirmDialog
+
+        def done(ok: bool) -> None:
+            if ok:
+                self.col.sched.forget_cards([self.card_id])
+                self.dismiss("reset")
+
+        self.app.push_screen(
+            ConfirmDialog("Reset Card", "Turn this card back into a new card? Its review history is kept."), done
+        )
+
+    @on(Button.Pressed, "#deck-options")
+    def _deck_options(self) -> None:
+        from .deck_options import DeckOptionsScreen
+
+        card = self.col.get_card(self.card_id)
+        def done(_) -> None:
+            self.options_changed = True
+
+        self.app.push_screen(DeckOptionsScreen(card.odid or card.did), done)

@@ -103,6 +103,24 @@ self-hosted server, tick "Use a self-hosted sync server" on the login screen.
   media sync and "Sync when AnkiTUI starts", and the "Log Out" button, which
   forgets the stored sync key (also "Log out of AnkiWeb" in `Ctrl+P`).
 
+#### Your own sync server (`ankitui server`)
+
+To sync your phone and computer without AnkiWeb, run Anki's own sync server
+on the computer (it needs the `anki` package: `uv sync --extra ankiweb`):
+
+```bash
+ankitui server -u alice              # asks for alice's password
+ankitui server -u alice:secret -p 8080 --data ~/anki-sync
+```
+
+It prints the address to use, for example `http://192.168.1.20:8080/`. Enter it
+as the sync server in AnkiDroid (Settings → Sync → Custom sync server), in Anki
+desktop (Preferences → Syncing → Self-hosted sync server) and in AnkiTUI (tick
+"Use a self-hosted sync server" on the login screen), then log in as `alice`.
+The devices must be able to reach the computer: the same Wi-Fi, or a VPN such as
+Tailscale when away from home. `ankitui server --help` lists all options;
+the `SYNC_*` environment variables of `python -m anki.syncserver` work too.
+
 #### Two sync engines
 
 - **The Anki library (recommended for AnkiWeb).** When the official `anki`
@@ -148,9 +166,9 @@ The choice and the theme are saved in `~/.config/ankitui/settings.json`.
 | Settings | `y` sync, `Esc` back |
 | Statistics | `d` deck/collection, `p` period, `r` refresh |
 | Everywhere | `?`/`F1` shortcuts, `Ctrl+P` command palette, `Ctrl+Q` quit |
-| Reviewer | `Space`/`Enter` show answer, then Good; `1`–`4` answer; `u` undo; `e` edit; `*` mark; `-` bury card; `=` bury note; `@` suspend card; `!` suspend note; `f` flag; `i` card info; `Ctrl+D` delete note; `m` more |
-| Editor | `Ctrl+S` add/save, `Ctrl+L` cloze, `Ctrl+P` preview, `Esc` close |
-| Browser | `/` search, `Enter`/`e` edit, `s` suspend, `d` change deck, `t`/`T` add/remove tags, `m` mark, `r` reset, `u` set due date, `o` sort, `Del` delete |
+| Reviewer | `Space`/`Enter` show answer, then Good; `1`–`4` answer; `u` undo; `e` edit; `*` mark; `f` flag; `-` bury card; `=` bury note; `@` suspend card; `!` suspend note; `i` card info; `o` deck options; `Ctrl+D` delete note |
+| Editor | `Ctrl+S` add/save, `Ctrl+L` cloze, `Ctrl+P` preview, `Esc` close; when editing: `Ctrl+D` delete note, and from the reviewer `Ctrl+R` reset card to new and a Deck Options button |
+| Browser | `/` search, `Enter`/`e` edit, `s` suspend, `f` flag, `d` change deck, `t`/`T` add/remove tags, `m` mark, `r` reset, `u` set due date, `o` sort, `Del` delete |
 
 ## Fidelity to Anki
 

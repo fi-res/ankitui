@@ -1,14 +1,23 @@
-"""Command line entry point: `ankitui [--collection PATH]`."""
+"""Command line entry point: `ankitui [--collection PATH]` or `ankitui server ...`."""
 
 from __future__ import annotations
 
 import argparse
+import sys
 
 from . import __version__
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(prog="ankitui", description="A terminal client for Anki collections.")
+    argv = sys.argv[1:] if argv is None else argv
+    if argv[:1] == ["server"]:
+        from .server import main as server_main
+
+        server_main(argv[1:])
+        return
+    parser = argparse.ArgumentParser(prog="ankitui", description="A terminal client for Anki collections.",
+        epilog="Run `ankitui server --help` to host your own sync server.",
+    )
     parser.add_argument(
         "-c",
         "--collection",

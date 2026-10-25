@@ -305,3 +305,55 @@ async def test_deck_page_actions(tmp_path):
         await pilot.pause()
         assert app.col.get_deck(did) is None
         assert isinstance(app.screen, DeckPickerScreen)
+
+
+async def test_reviewer_flag_and_edit_actions(tmp_path):
+    from ankitui.ui.dialogs import ChoiceDialog, ConfirmDialog
+    from ankitui.ui.note_editor import EditNoteScreen
+
+    app = make_app(tmp_path)
+    async with app.run_test(size=(120, 40)) as pilot:
+        add_basic(app.col, "a")
+        add_basic(app.col, "b")
+        app.screen.refresh_decks()
+        await pilot.press("enter")
+        await pilot.pause()
+        reviewer = app.screen
+        assert "more" not in {b.action for b in reviewer.BINDINGS}
+
+        await pilot.press("f")
+        await pilot.pause()
+        assert isinstance(app.screen, ChoiceDialog)
+        first = app.screen.choices[1][1]
+        assert first.plain.endswith("Red") and "#ef4444" in str(first.spans[0].style)
+        app.screen.dismiss("3")
+        await pilot.pause()
+        assert app.col.get_card(reviewer.current.card.id).user_flag == 3
+
+        first_nid = reviewer.current.card.nid
+        await pilot.press("e")
+        await pilot.pause()
+        assert isinstance(app.screen, EditNoteScreen)
+        assert app.screen.query_one("#reset-card") and app.screen.query_one("#deck-options")
+        await pilot.press("ctrl+d")
+        await pilot.pause()
+        assert isinstance(app.screen, ConfirmDialog)
+        app.screen.dismiss(True)
+        await pilot.pause()
+        assert app.screen is reviewer
+        assert app.col.note_count() == 1
+        assert reviewer.current.card.nid != first_nid
+
+
+def test_server_args(monkeypatch):
+    from ankitui.server import parse_args, server_env
+
+    args = parse_args(["-u", "alice:secret", "-u", "bob:pw", "-p", "9000", "--data", "/tmp/x"])
+    env = server_env(args, {"SYNC_USER1": "old:old", "HOME": "/h"})
+    assert env["SYNC_USER1"] == "alice:secret" and env["SYNC_USER2"] == "bob:pw"
+    assert env["SYNC_PORT"] == "9000" and env["SYNC_BASE"] == "/tmp/x" and env["HOME"] == "/h"
+    monkeypatch.setattr("getpass.getpass", lambda _prompt: "typed")
+    assert server_env(parse_args(["-u", "carol"]), {})["SYNC_USER1"] == "carol:typed"
+    assert server_env(parse_args([]), {"SYNC_USER1": "env:pw"})["SYNC_USER1"] == "env:pw"
+    with pytest.raises(SystemExit):
+        server_env(parse_args([]), {})

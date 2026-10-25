@@ -20,6 +20,7 @@ from ..core.utils import strip_html
 from .dialogs import ChoiceDialog, ConfirmDialog, PromptDialog
 from .icons import icon
 from .render import html_to_text
+from .reviewer import FLAG_COLORS, FLAG_NAMES, flag_label
 
 MAX_ROWS = 5000
 
@@ -34,6 +35,7 @@ class BrowserScreen(Screen):
         Binding("t", "add_tag", "Tag"),
         Binding("T", "remove_tag", "Untag", show=False),
         Binding("m", "toggle_mark", "Mark", show=False),
+        Binding("f", "flag", "Flag"),
         Binding("r", "forget", "Reset", show=False),
         Binding("u", "set_due", "Set due", show=False),
         Binding("o", "sort", "Sort"),
@@ -141,7 +143,7 @@ class BrowserScreen(Screen):
         if queue == consts.QUEUE_SUSPENDED:
             style = "on dark_goldenrod"
         elif flags & 7:
-            style = {1: "red", 2: "dark_orange", 3: "green", 4: "blue", 5: "hot_pink", 6: "turquoise2", 7: "purple"}[flags & 7]
+            style = FLAG_COLORS[flags & 7]
         elif " marked " in f" {tags.lower()} ":
             style = "magenta"
         sort_txt = Text(strip_html(str(sfld)).replace("\n", " ")[:80], style=style)
@@ -233,6 +235,23 @@ class BrowserScreen(Screen):
             self.col.sched.suspend_cards([cid])
             self.notify("Card suspended")
         self._refresh_row(cid)
+
+    def action_flag(self) -> None:
+        cid = self.selected_cid()
+        if cid is None:
+            return
+        current = self.col.get_card(cid).user_flag
+
+        def done(key: str | None) -> None:
+            if key is None:
+                return
+            card = self.col.get_card(cid)
+            card.set_user_flag(int(key))
+            self.col.update_card(card)
+            self.col.save()
+            self._refresh_row(cid)
+
+        self.app.push_screen(ChoiceDialog("Flag card", [(str(k), flag_label(k, k == current)) for k in FLAG_NAMES]), done)
 
     def action_change_deck(self) -> None:
         cid = self.selected_cid()
