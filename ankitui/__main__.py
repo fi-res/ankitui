@@ -14,12 +14,15 @@ def main(argv: list[str] | None = None) -> None:
         "--collection",
         help="path to the collection file (default: $ANKITUI_COLLECTION or ~/.local/share/ankitui/collection.anki2)",
     )
+    icons = parser.add_mutually_exclusive_group()
+    icons.add_argument("--icons", dest="icons", action="store_true", default=None, help="use Nerd Font icons")
+    icons.add_argument("--no-icons", dest="icons", action="store_false", help="use plain Unicode symbols instead of Nerd Font icons")
     parser.add_argument("--version", action="version", version=f"ankitui {__version__}")
     args = parser.parse_args(argv)
 
     from .ui.app import AnkiTUI
 
-    AnkiTUI(args.collection).run()
+    AnkiTUI(args.collection, use_icons=args.icons).run()
 
 
 if __name__ == "__main__":

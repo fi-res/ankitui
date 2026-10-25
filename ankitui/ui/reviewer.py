@@ -12,7 +12,7 @@ from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, VerticalScroll
 from textual.screen import Screen
-from textual.widgets import Button, Footer, Input, Static
+from textual.widgets import Button, Footer, Input, ProgressBar, Static
 
 from ..core import consts
 from ..core.sched.queue import KIND_DAY_LEARN, KIND_LEARN, KIND_NEW, KIND_REVIEW
@@ -22,6 +22,7 @@ from ..core.template import CLOZE_RE, TYPE_ANSWER_MARKER, cloze_answer_text, com
 from ..core.utils import strip_html
 from .deck_picker import LEARN_COLOR, NEW_COLOR, REVIEW_COLOR
 from .dialogs import ChoiceDialog, ConfirmDialog, MessageDialog
+from .icons import icon
 from .render import html_to_text
 
 FLAG_NAMES = {0: "No flag", 1: "Red", 2: "Orange", 3: "Green", 4: "Blue", 5: "Pink", 6: "Turquoise", 7: "Purple"}
@@ -56,6 +57,7 @@ class ReviewerScreen(Screen):
         self.shown_at = time.time()
         self.typed = ""
         self.type_correct: str | None = None
+        self.session_done = 0
 
     @property
     def col(self):
@@ -65,6 +67,7 @@ class ReviewerScreen(Screen):
         with Horizontal(id="review-top"):
             yield Static("", id="review-counts")
             yield Static("", id="review-timer")
+        yield ProgressBar(total=1, show_eta=False, show_percentage=False, id="review-progress")
         with VerticalScroll(id="card-scroll"):
             yield Static("", id="card-content")
             yield Input(placeholder="Type the answer and press Enter", id="type-answer")
@@ -101,28 +104,47 @@ class ReviewerScreen(Screen):
         counts = self.col.sched.counts()
         kind = self.current.kind if self.current else None
         text = Text()
-        for value, color, kinds in (
-            (counts.new, NEW_COLOR, (KIND_NEW,)),
-            (counts.learning, LEARN_COLOR, (KIND_LEARN, KIND_DAY_LEARN)),
-            (counts.review, REVIEW_COLOR, (KIND_REVIEW,)),
+        for value, color, kinds, ico in (
+            (counts.new, NEW_COLOR, (KIND_NEW,), "new"),
+            (counts.learning, LEARN_COLOR, (KIND_LEARN, KIND_DAY_LEARN), "learn"),
+            (counts.review, REVIEW_COLOR, (KIND_REVIEW,), "review"),
         ):
-            style = f"bold {color}" + (" underline" if kind in kinds else "")
+            active = kind in kinds
+            style = f"bold {color}" + (" underline" if active else "")
+            text.append(icon(ico), style=color if active else "dim")
             text.append(str(value), style=style)
-            text.append("  ")
+            text.append("   ")
         if self.current:
             card = self.current.card
             deck = self.col.get_deck(card.odid or card.did)
-            text.append(f"  {deck['name'] if deck else ''}", style="dim")
+            text.append(f"{icon('deck')}{deck['name'] if deck else ''}", style="dim")
             if card.user_flag:
-                text.append(f"  ⚑ {FLAG_NAMES[card.user_flag]}", style=FLAG_COLORS[card.user_flag])
+                text.append(f"   {icon('flag')}{FLAG_NAMES[card.user_flag]}", style=FLAG_COLORS[card.user_flag])
             note = self.col.get_note(card.nid)
             if note and note.has_tag("marked"):
-                text.append("  ★ marked", style="yellow")
+                text.append(f"   {icon('star')}marked", style="yellow")
+            if note and note.has_tag("leech"):
+                text.append(f"   {icon('leech')}leech", style="red")
         self.query_one("#review-counts", Static).update(text)
+        remaining = counts.new + counts.learning + counts.review
+        bar = self.query_one("#review-progress", ProgressBar)
+        bar.update(total=max(self.session_done + remaining, 1), progress=self.session_done)
 
     def update_timer(self) -> None:
         secs = int(time.time() - self.shown_at)
-        self.query_one("#review-timer", Static).update(f"{secs // 60}:{secs % 60:02d}")
+        self.query_one("#review-timer", Static).update(
+            Text(f"{icon('clock')}{secs // 60}:{secs % 60:02d}", style="dim")
+        )
+
+    def refresh_view(self) -> None:
+        """Re-render after a global appearance change."""
+        if self.current is None:
+            return
+        self.update_counts()
+        if self.showing_answer:
+            self.show_answer()
+        else:
+            self.query_one("#btn-show", Button).label = icon("eye") + "Show Answer"
 
     def render_card_content(self, answer: bool) -> None:
         card = self.current.card
@@ -169,6 +191,7 @@ class ReviewerScreen(Screen):
         self.typed = ""
         self.render_card_content(answer=False)
         btn = self.query_one("#btn-show", Button)
+        btn.label = icon("eye") + "Show Answer"
         btn.display = True
         for ident in ("again", "hard", "good", "easy"):
             self.query_one(f"#btn-{ident}", Button).display = False
@@ -189,7 +212,10 @@ class ReviewerScreen(Screen):
         self.query_one("#btn-show", Button).display = False
         for i, (name, ident) in enumerate((("Again", "again"), ("Hard", "hard"), ("Good", "good"), ("Easy", "easy"))):
             button = self.query_one(f"#btn-{ident}", Button)
-            button.label = f"{i + 1} {name}  {labels[i]}"
+            label = Text(icon(ident) + name, style="bold")
+            label.append(f"  {labels[i]}", style="not bold")
+            button.label = label
+            button.tooltip = f"Press {i + 1}"
             button.display = True
         self.query_one("#btn-good", Button).focus()
 
@@ -200,6 +226,7 @@ class ReviewerScreen(Screen):
         taken = int((time.time() - self.shown_at) * 1000)
         nxt = qc.states.for_ease(ease)
         self.col.sched.answer_card(qc.card, qc.states, ease, taken)
+        self.session_done += 1
         if is_leeched(nxt):
             card = self.col.get_card(qc.card.id)
             msg = "Card was a leech and has been suspended." if card.queue == consts.QUEUE_SUSPENDED else "Card was a leech."
@@ -253,6 +280,7 @@ class ReviewerScreen(Screen):
             self.notify("Nothing to undo")
             return
         self.notify(f"Undone: {entry.name}")
+        self.session_done = max(self.session_done - 1, 0)
         self.next_card()
 
     def action_edit(self) -> None:

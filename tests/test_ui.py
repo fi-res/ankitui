@@ -13,6 +13,7 @@ from conftest import add_basic
 
 
 def make_app(tmp_path):
+    os.environ.setdefault("XDG_CONFIG_HOME", str(tmp_path / "cfg"))
     return AnkiTUI(str(tmp_path / "c.anki2"))
 
 
@@ -131,3 +132,29 @@ def test_html_render():
     plain = text.plain
     assert "bold" in plain and "[...]" in plain and "x & y" in plain
     assert "♪ a.mp3" in plain and "[image: c.png]" in plain
+
+
+async def test_stats_and_help_screens(tmp_path, monkeypatch):
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "cfg"))
+    from ankitui.ui.help import HelpScreen
+    from ankitui.ui.stats import StatsScreen, StatsPanel
+
+    app = make_app(tmp_path)
+    async with app.run_test(size=(140, 50)) as pilot:
+        add_basic(app.col, "a")
+        await pilot.press("s")
+        await pilot.pause(0.3)
+        assert isinstance(app.screen, StatsScreen)
+        assert len(app.screen.query(StatsPanel)) == 12
+        await pilot.press("p")
+        await pilot.pause(0.2)
+        await pilot.press("escape")
+        await pilot.press("question_mark")
+        await pilot.pause()
+        assert isinstance(app.screen, HelpScreen)
+        await pilot.press("escape")
+        await pilot.pause()
+        app.action_toggle_icons()
+        await pilot.pause()
+        assert app.settings["icons"] is False
+        app.action_toggle_icons()

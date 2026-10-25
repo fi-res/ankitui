@@ -18,6 +18,7 @@ from ..core import consts
 from ..core.search import ORDER_CLAUSES, SearchError
 from ..core.utils import strip_html
 from .dialogs import ChoiceDialog, ConfirmDialog, PromptDialog
+from .icons import icon
 from .render import html_to_text
 
 MAX_ROWS = 5000
@@ -54,7 +55,7 @@ class BrowserScreen(Screen):
         yield Header()
         with Horizontal(id="browser-search"):
             yield Input(self.query_text, placeholder='Search, e.g. deck:French is:due tag:verb "some text"', id="search")
-            yield Button("Search", id="go")
+            yield Button(icon("browse") + "Search", id="go")
         yield DataTable(id="browser-table", cursor_type="row", zebra_stripes=True)
         with VerticalScroll(id="browser-preview"):
             yield Static("", id="preview")

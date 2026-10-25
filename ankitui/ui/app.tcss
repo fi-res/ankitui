@@ -52,9 +52,34 @@ ModalScreen {
 
 /* ---------------------------------------------------------------- decks */
 
+#today-banner {
+    height: 1;
+    padding: 0 1;
+    background: $boost;
+}
+
+#deck-main {
+    height: 1fr;
+}
+
 #deck-table {
+    width: 2fr;
     height: 1fr;
     border: round $primary-darken-1;
+}
+
+#deck-table:focus {
+    border: round $accent;
+}
+
+#deck-info {
+    width: 1fr;
+    min-width: 32;
+    max-width: 48;
+    height: 1fr;
+    border: round $primary-darken-2;
+    border-title-color: $accent;
+    padding: 0 1;
 }
 
 #deck-summary {
@@ -90,14 +115,31 @@ ModalScreen {
     content-align: center middle;
 }
 
-#overview-counts {
+#overview-tiles {
     height: auto;
     margin: 1 0;
+}
+
+.tile {
+    width: 1fr;
+    height: 4;
+    border: round $primary-darken-2;
+    content-align: center middle;
+}
+
+#overview-message {
+    height: auto;
+    margin-bottom: 1;
+}
+
+#overview-info {
+    height: auto;
 }
 
 #overview-buttons {
     height: auto;
     margin-top: 1;
+    align-horizontal: center;
 }
 
 #overview-buttons Button {
@@ -119,6 +161,20 @@ ModalScreen {
 #review-timer {
     width: auto;
     color: $text-muted;
+}
+
+#review-progress {
+    height: 1;
+    width: 100%;
+    padding: 0 1;
+}
+
+#review-progress Bar {
+    width: 1fr;
+}
+
+#review-progress > .bar--bar {
+    color: $success;
 }
 
 #card-scroll {
@@ -272,4 +328,56 @@ ModalScreen {
 #cs-tags {
     height: 10;
     border: round $primary-darken-2;
+}
+
+/* ---------------------------------------------------------------- stats */
+
+#stats-toolbar {
+    height: auto;
+    padding: 0 1;
+}
+
+#stats-toolbar Label {
+    padding: 1 1 0 2;
+}
+
+#stats-toolbar Select {
+    width: 36;
+}
+
+#stats-grid {
+    height: auto;
+    padding: 0 1;
+}
+
+.stats-pair {
+    height: auto;
+}
+
+.stats-pair .stats-panel {
+    width: 1fr;
+}
+
+#stats-grid.narrow .stats-pair {
+    layout: vertical;
+}
+
+#stats-grid.narrow .stats-pair .stats-panel {
+    width: 100%;
+}
+
+.stats-panel {
+    height: auto;
+    border: round $primary-darken-2;
+    border-title-color: $accent;
+    border-title-style: bold;
+    padding: 0 1;
+}
+
+#answer-bar Button:focus {
+    text-style: bold;
+}
+
+.help-title {
+    margin-top: 1;
 }

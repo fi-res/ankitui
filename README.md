@@ -36,6 +36,16 @@ to Python.
   CSV/TSV text files (Anki `#separator:` style headers are understood).
 - **Export**: `.apkg` (a deck or everything, with or without scheduling and
   media), `.colpkg`, and plain-text notes.
+- **Statistics** (`s` in the deck list, `t` in the overview), for one deck or the
+  whole collection, over 1 month, 3 months, 1 year or the deck's life: today's
+  summary, card counts, future due forecast, a review calendar heatmap with
+  streaks, reviews and review time per day (learning, young, mature, relearning,
+  filtered), interval and ease distributions, hourly breakdown, answer buttons,
+  cards added, and a true retention table.
+- **Interface**: Nerd Font icons, a details panel for the highlighted deck, a
+  "today" banner with your study streak, a session progress bar in the reviewer,
+  a keyboard shortcut reference (`?` or `F1`) and command palette entries
+  (`Ctrl+P`). The theme you pick in the palette is remembered.
 
 The collection is stored in Anki's schema 11 SQLite format, the format inside
 legacy packages. Anki desktop and AnkiDroid can open the file directly, and the
@@ -65,12 +75,27 @@ ankitui -c path/to/collection.anki2
 
 You can also set the collection path with `ANKITUI_COLLECTION`.
 
+### Icons
+
+The interface uses [Nerd Font](https://www.nerdfonts.com) icons, so your
+terminal needs a Nerd Font (for example "JetBrainsMono Nerd Font", or "Symbols
+Nerd Font" as a fallback font). Without one, switch to plain Unicode symbols in
+any of these ways:
+
+- `ankitui --no-icons`
+- `ANKITUI_ICONS=0 ankitui`
+- the "Toggle Nerd Font icons" command (`Ctrl+P`, or `m` in the deck list)
+
+The choice and the theme are saved in `~/.config/ankitui/settings.json`.
+
 ## Keys
 
 | Screen | Keys |
 | --- | --- |
-| Deck list | `Enter` study, `v` overview, `a` add, `b` browse, `n` new deck, `f` filtered deck, `c` custom study, `o` options, `r` rename, `Del` delete, `Space` collapse, `i` import, `e` export, `u` undo, `m` more, `q` quit |
-| Overview | `s`/`Enter` study, `c` custom study, `o` options, `u` unbury, `Esc` back |
+| Deck list | `Enter` study, `v` overview, `a` add, `b` browse, `s` statistics, `n` new deck, `f` filtered deck, `c` custom study, `o` options, `r` rename, `Del` delete, `Space` collapse, `i` import, `e` export, `u` undo, `m` more, `q` quit |
+| Overview | `s`/`Enter` study, `c` custom study, `o` options, `t` statistics, `u` unbury, `Esc` back |
+| Statistics | `d` deck/collection, `p` period, `r` refresh |
+| Everywhere | `?`/`F1` shortcuts, `Ctrl+P` command palette, `Ctrl+Q` quit |
 | Reviewer | `Space`/`Enter` show answer, then Good; `1`–`4` answer; `u` undo; `e` edit; `*` mark; `-` bury card; `=` bury note; `@` suspend card; `!` suspend note; `f` flag; `i` card info; `Ctrl+D` delete note; `m` more |
 | Editor | `Ctrl+S` add/save, `Ctrl+L` cloze, `Ctrl+P` preview, `Esc` close |
 | Browser | `/` search, `Enter`/`e` edit, `s` suspend, `d` change deck, `t`/`T` add/remove tags, `m` mark, `r` reset, `u` set due date, `o` sort, `Del` delete |
@@ -86,9 +111,8 @@ package with fuzz turned off):
 - Deck list counts and study queue counts: random deck trees with per-deck
   limits and sibling burying, with no differences.
 
-Not implemented: FSRS, sync with AnkiWeb, audio playback and image display
-(media is shown as `[image: name]` and `♪ name` placeholders), and statistics
-graphs (the deck list's "More" menu has a text summary instead).
+Not implemented: FSRS, sync with AnkiWeb, and audio playback and image display
+(media is shown as `[image: name]` and `♪ name` placeholders).
 
 ## Development
 

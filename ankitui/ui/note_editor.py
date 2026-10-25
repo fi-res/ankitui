@@ -15,6 +15,7 @@ from ..core import consts
 from ..core.models import Note, field_names
 from ..core.template import CLOZE_RE
 from ..core.utils import canonify_tags, parse_tags
+from .icons import icon
 
 _BR_RE = re.compile(r"(?i)<br\s*/?>")
 
@@ -63,10 +64,10 @@ class _NoteForm(Screen):
             yield Label("Tags (space separated):", classes="field-label")
             yield Input(" ".join(self.note.tags), id="tags")
             with Horizontal(id="editor-buttons"):
-                yield Button(self.save_label(), variant="primary", id="save")
-                yield Button("Cloze [...]", id="cloze")
-                yield Button("Preview", id="preview")
-                yield Button("Close", id="close")
+                yield Button(icon("check") + self.save_label(), variant="primary", id="save")
+                yield Button(icon("tag") + "Cloze [...]", id="cloze")
+                yield Button(icon("eye") + "Preview", id="preview")
+                yield Button(icon("times") + "Close", id="close")
         yield Footer()
 
     def deck_options(self) -> list[tuple[str, int]]:
